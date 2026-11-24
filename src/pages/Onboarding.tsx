@@ -64,7 +64,7 @@ export default function Onboarding() {
   ];
   const last = step === steps.length - 1;
   return (
-    <div className="paper-grain relative flex h-full flex-col overflow-y-auto bg-ivory">
+    <div className="paper-grain relative flex h-full flex-col overflow-y-auto overflow-x-hidden bg-ivory">
       <Watermark className="bottom-4 start-1/2 -translate-x-1/2 rtl:translate-x-1/2" size={140} />
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-2"><Logo size={30} /><span className="serif text-lg font-semibold">{t('brand')}</span></div>
