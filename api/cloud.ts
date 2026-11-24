@@ -26,8 +26,8 @@ async function readJson(pathname: string): Promise<any> {
 
 const safeHash = (h: string | null) => (h && /^[a-zA-Z0-9]{6,80}$/.test(h) ? h : null);
 
-export default async function handler(request: Request): Promise<Response> {
-  const url = new URL(request.url);
+async function handler(request: Request): Promise<Response> {
+  const url = new URL(request.url, 'https://localhost');
   const op = url.searchParams.get('op');
   try {
     if (op === 'upload' && request.method === 'POST') {
@@ -111,3 +111,7 @@ export default async function handler(request: Request): Promise<Response> {
     return json({ error: String(e?.message || e) }, 500);
   }
 }
+
+export function GET(request: Request) { return handler(request); }
+export function POST(request: Request) { return handler(request); }
+export function DELETE(request: Request) { return handler(request); }
