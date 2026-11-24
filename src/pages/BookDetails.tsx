@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, CheckCircle2, Heart, FolderPlus, Edit3, Share2, Sparkles, Trash2, Search as SearchIcon, AlertTriangle, PenLine, Loader2 } from 'lucide-react';
+import { Cloud, CloudDownload, CloudUpload, BookOpen, CheckCircle2, Heart, FolderPlus, Edit3, Share2, Sparkles, Trash2, Search as SearchIcon, AlertTriangle, PenLine, Loader2 } from 'lucide-react';
 import { useStore, useT, useLang, useAnnotations, useSessions, uid } from '../store';
 import { Button, Card, ConfirmDialog, EmptyState, Field, Modal, ProgressBar, SectionHeader, Stars, TagInput, Watermark } from '../components/ui';
 import { BookCover, STATUSES, AddToCollection, invalidateCover, statusDot } from '../components/books';
@@ -10,7 +10,10 @@ import { hasFile, saveCover } from '../lib/storage';
 import { shrinkImage } from '../lib/parse';
 import { searchOpenLibrary, askClaudeForBook, type Suggestion } from '../lib/net';
 import { isHostedByClaude } from '../lib/claude';
+const inClaude = isHostedByClaude();
 import { fmtDate, fmtDuration, fmtNum } from '../i18n';
+import { useCloud, cloudSupported, enqueueUpload, downloadBook, removeFromCloud, markCoverDirty } from '../lib/cloud';
+import { CloudProgress } from '../components/CloudCard';
 import { remainingSeconds } from '../lib/stats';
 import type { Annotation, Book } from '../types';
 
@@ -28,6 +31,8 @@ export default function BookPage({ id }: { id: string }) {
   const [enrich, setEnrich] = useState(false);
   const [noteEdit, setNoteEdit] = useState<Annotation | null>(null);
   const [review, setReview] = useState(book?.review || '');
+  const cloudOn = useCloud((c) => c.status === 'on' || c.status === 'syncing');
+  const busyCloud = useCloud((c) => c.uploads[id] != null || c.downloads[id] != null);
   useEffect(() => { if (book) hasFile(book.fileHash).then(setFileOk); }, [book?.fileHash]);
   useEffect(() => { setReview(book?.review || ''); }, [id]);
   useEffect(() => { if (!book || review === (book.review || '')) return; const h = setTimeout(() => s.updateBook(id, { review }), 700); return () => clearTimeout(h); }, [review]);
@@ -62,7 +67,7 @@ export default function BookPage({ id }: { id: string }) {
         <div className="mx-auto w-48 md:w-full">
           <BookCover book={book} size="lg" className="w-full" />
           <label className="mt-3 flex cursor-pointer justify-center text-sm text-muted hover:text-ink">{t('bd.changeCover')}
-            <input type="file" accept="image/*" className="sr-only" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; await saveCover(id, await shrinkImage(f)); invalidateCover(id); s.updateBook(id, { hasCover: true }); }} />
+            <input type="file" accept="image/*" className="sr-only" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; await saveCover(id, await shrinkImage(f)); invalidateCover(id); s.updateBook(id, { hasCover: true }); markCoverDirty(id); }} />
           </label>
         </div>
         <div className="relative min-w-0">
@@ -85,7 +90,13 @@ export default function BookPage({ id }: { id: string }) {
               <ProgressBar value={book.progress} />
             </div>
           )}
-          {!fileOk && <div className="mt-4 flex items-start gap-2 rounded-xl bg-wine/10 p-3 text-sm text-wine"><AlertTriangle size={18} className="shrink-0" />{t('bd.noFile')}</div>}
+          {!fileOk && (book.cloud && cloudOn ? (
+            <div className="mt-4 rounded-xl bg-forest/10 p-3 text-sm">
+              <div className="flex flex-wrap items-center gap-3"><Cloud size={18} className="text-forest" /><span className="flex-1">{t('cloud.notHere')}</span>
+                <Button size="sm" variant="primary" disabled={busyCloud} onClick={async () => { try { await downloadBook(book); setFileOk(true); } catch (e: any) { s.toast(String(e?.message || e)); } }}><CloudDownload size={15} />{t('cloud.download')}</Button></div>
+              <CloudProgress id={id} />
+            </div>
+          ) : <div className="mt-4 flex items-start gap-2 rounded-xl bg-wine/10 p-3 text-sm text-wine"><AlertTriangle size={18} className="shrink-0" />{book.cloud && cloudSupported() ? t('cloud.connectToGet') : t('bd.noFile')}</div>)}
           <div className="mt-6 flex flex-wrap gap-2">
             <Button variant="primary" disabled={!fileOk} onClick={() => s.openReader(id)}><BookOpen size={18} />{book.progress > 0 && book.progress < 1 ? t('bd.continue') : t('bd.read')}</Button>
             {book.status !== 'completed' && <Button onClick={() => { s.setStatus(id, 'completed'); s.toast(t('toast.statusChanged')); }}><CheckCircle2 size={18} />{t('bd.markDone')}</Button>}
@@ -97,8 +108,11 @@ export default function BookPage({ id }: { id: string }) {
             <Button variant="ghost" size="sm" onClick={() => setEnrich(true)}><Sparkles size={15} />{t('bd.enrich')}</Button>
             <Button variant="ghost" size="sm" onClick={() => setNoteEdit({ id: uid('n'), updatedAt: Date.now(), bookId: id, kind: 'note', target: 'book', createdAt: Date.now() })}><PenLine size={15} />{t('rd.note')}</Button>
             <Button variant="ghost" size="sm" onClick={share}><Share2 size={15} />{t('bd.share')}</Button>
+            {cloudOn && fileOk && !book.cloud && <Button variant="ghost" size="sm" disabled={busyCloud} onClick={() => enqueueUpload(book)}><CloudUpload size={15} />{t('cloud.save')}</Button>}
+            {cloudOn && book.cloud && <Button variant="ghost" size="sm" onClick={() => removeFromCloud(book).catch((e) => s.toast(String(e?.message || e)))}><Cloud size={15} className="text-forest" />{t('cloud.remove')}</Button>}
             <Button variant="ghost" size="sm" onClick={() => setDel(true)}><Trash2 size={15} />{t('bd.deleteBook')}</Button>
           </div>
+          {fileOk && <CloudProgress id={id} />}
           {book.description && <div className="mt-6"><h2 className="mb-2 font-semibold">{t('bd.description')}</h2><p className="max-w-[68ch] whitespace-pre-line leading-relaxed" dir="auto">{book.description}</p></div>}
         </div>
       </div>
@@ -216,7 +230,7 @@ function Enrich({ book, onClose }: { book: Book; onClose: () => void }) {
     if (f.countries) f.countries = [...new Set([...cur.countries, ...f.countries])];
     if (f.tags) f.tags = [...new Set([...cur.tags, ...f.tags])];
     if (f.pages) f.pagesEstimated = false;
-    if ((!field || field === 'cover') && sg.cover) { await saveCover(book.id, sg.cover); invalidateCover(book.id); f.hasCover = true; }
+    if ((!field || field === 'cover') && sg.cover) { await saveCover(book.id, sg.cover); invalidateCover(book.id); f.hasCover = true; markCoverDirty(book.id); }
     delete f.cover;
     s.updateBook(book.id, f);
     s.toast(t('toast.saved'));
@@ -227,8 +241,8 @@ function Enrich({ book, onClose }: { book: Book; onClose: () => void }) {
     <Modal open onClose={onClose} title={t('bd.enrich')} wide>
       <p className="mb-4 text-sm text-muted">{t('bd.enrichHint')}</p>
       <div className="mb-4 flex flex-wrap gap-2">
-        <Button variant="primary" disabled={!!busy} onClick={() => run('ai')}>{busy === 'ai' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}{t('bd.enrichAI')}</Button>
-        <Button disabled={!!busy} onClick={() => run('ol')}>{busy === 'ol' ? <Loader2 size={16} className="animate-spin" /> : <SearchIcon size={16} />}{t('bd.enrichOL')}</Button>
+        {inClaude && <Button variant="primary" disabled={!!busy} onClick={() => run('ai')}>{busy === 'ai' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}{t('bd.enrichAI')}</Button>}
+        <Button variant={inClaude ? 'soft' : 'primary'} disabled={!!busy} onClick={() => run('ol')}>{busy === 'ol' ? <Loader2 size={16} className="animate-spin" /> : <SearchIcon size={16} />}{t('bd.enrichOL')}</Button>
       </div>
       {err && <p className="mb-3 text-sm text-wine">{err}</p>}
       {res.map((sg, i) => (

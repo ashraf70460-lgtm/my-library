@@ -5,7 +5,9 @@ import {
 } from 'lucide-react';
 import { useStore, useT, useLang, useCollections, useSessions } from './store';
 import { Logo, Toasts, IconButton } from './components/ui';
+import { InstallButton } from './components/Install';
 import { startSync } from './lib/sync';
+import { startCloud, useCloud } from './lib/cloud';
 import { storageAvailable } from './lib/storage';
 import { byDay, dayKey } from './lib/stats';
 import HomePage from './pages/Home';
@@ -46,7 +48,7 @@ export default function App() {
   const sessions = useSessions();
   const pinned = useCollections().filter((c) => c.pinned);
 
-  useEffect(() => { if (started) return; started = true; s.init().then(() => startSync()); }, []);
+  useEffect(() => { if (started) return; started = true; s.init().then(() => { startSync(); startCloud(); }); }, []);
   useEffect(() => {
     const root = document.documentElement;
     root.lang = lang; root.dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -157,6 +159,7 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <div className="px-4"><InstallButton compact /></div>
         <SyncBadge />
       </aside>
 
@@ -233,7 +236,9 @@ export default function App() {
 
 function SyncBadge() {
   const t = useT();
-  const st = useStore((s) => s.syncState);
+  const cloud = useCloud((c) => c.status);
+  const claudeSync = useStore((s) => s.syncState);
+  const st = cloud !== 'off' && cloud !== 'error' ? (cloud === 'connecting' ? 'connecting' : cloud) : claudeSync;
   const label = st === 'on' ? t('set.syncOn') : st === 'syncing' || st === 'connecting' ? t('set.syncing') : t('storage.local');
   return (
     <div className="flex items-center gap-2 px-5 py-3 text-xs text-muted">

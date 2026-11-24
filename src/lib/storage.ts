@@ -2,7 +2,7 @@
 // The RecordStore interface is what a cloud adapter (see sync.ts) mirrors.
 import { openDB, type IDBPDatabase } from 'idb';
 
-export const RECORD_KINDS = ['books', 'annotations', 'sessions', 'journal', 'collections', 'authors', 'challenges'] as const;
+export const RECORD_KINDS = ['books', 'annotations', 'sessions', 'journal', 'collections', 'authors', 'challenges', 'wishlist'] as const;
 export type RecordKind = (typeof RECORD_KINDS)[number];
 const BLOB_STORES = ['files', 'covers', 'content', 'kv'] as const;
 type BlobStore = (typeof BLOB_STORES)[number];
@@ -13,7 +13,7 @@ export let storageAvailable = true;
 
 function getDB() {
   if (!dbp) {
-    dbp = openDB('my-library', 1, {
+    dbp = openDB('my-library', 2, {
       upgrade(db) {
         for (const k of [...RECORD_KINDS, ...BLOB_STORES]) if (!db.objectStoreNames.contains(k)) db.createObjectStore(k);
       },

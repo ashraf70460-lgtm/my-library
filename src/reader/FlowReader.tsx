@@ -16,6 +16,9 @@ export interface ReaderApi {
   search: (q: string) => { chapter: number; start: number; end: number; snippet: string }[];
   showMatch: (chapter: number, start: number, end: number) => void;
   snippetHere: () => string;
+  ttsMark?: (chapter: number, start: number, end: number) => void;
+  ttsClear?: () => void;
+  currentOffset?: () => { chapter: number; offset: number };
 }
 
 interface Props {
@@ -49,6 +52,7 @@ export const FlowReader = forwardRef<ReaderApi, Props>(function FlowReader({ boo
   const paged = prefs.mode === 'paged';
   const charsBefore = useMemo(() => { const a = [0]; for (const c of chapters) a.push(a[a.length - 1] + Math.max(1, c.text.length)); return a; }, [chapters]);
   const totalChars = charsBefore[charsBefore.length - 1];
+  const tts = useRef<{ chapter: number; start: number; end: number } | null>(null);
   const chHls = useMemo(() => annotations.filter((a) => a.kind === 'highlight' && a.chapter === chapter && a.start != null), [annotations, chapter]);
 
   // measure container
@@ -92,7 +96,25 @@ export const FlowReader = forwardRef<ReaderApi, Props>(function FlowReader({ boo
     el.innerHTML = chapters[chapter]?.html || '';
     for (const h of chHls) wrapRange(el, h.start!, h.end!, `hl hl-${h.color || 'yellow'}${h.note ? ' has-note' : ''}`, h.id, h.note);
     if (pendingStart.current?.cls) wrapRange(el, pendingStart.current.start, pendingStart.current.end!, 'hl hl-search', 'search');
+    if (tts.current && tts.current.chapter === chapter) wrapRange(el, tts.current.start, tts.current.end, 'hl hl-tts', 'tts');
   }, [chapter, chapters, chHls]);
+
+  const showTts = useCallback(() => {
+    const el = inner.current, sc = scroller();
+    if (!el || !sc || !tts.current || tts.current.chapter !== chapter) return;
+    unwrapAll(el, 'mark[data-hl="tts"]');
+    wrapRange(el, tts.current.start, tts.current.end, 'hl hl-tts', 'tts');
+    const m = el.querySelector('mark.hl-tts') as HTMLElement | null;
+    if (!m) return;
+    const r = m.getBoundingClientRect(), sr = sc.getBoundingClientRect();
+    if (paged) {
+      const off = rtl ? sr.right - r.right : r.left - sr.left;
+      const p = Math.floor((off + Math.abs(sc.scrollLeft)) / step);
+      if (p !== page) goPage(p);
+    } else if (r.top < sr.top + 60 || r.bottom > sr.bottom - 90) {
+      sc.scrollTo({ top: sc.scrollTop + (r.top - sr.top) - sc.clientHeight / 3, behavior: 'smooth' });
+    }
+  }, [chapter, paged, rtl, step, page, goPage]);
 
   const restore = useCallback(() => {
     const el = inner.current, sc = scroller();
@@ -193,13 +215,25 @@ export const FlowReader = forwardRef<ReaderApi, Props>(function FlowReader({ boo
       return out;
     },
     showMatch: (ci, start, end) => goChapter(ci, 0, start, end),
+    ttsMark: (ci, start, end) => {
+      tts.current = { chapter: ci, start, end };
+      if (ci !== chapter) { pendingStart.current = { start }; pendingRatio.current = 0; setChapter(ci); }
+      else showTts();
+    },
+    ttsClear: () => { tts.current = null; if (inner.current) unwrapAll(inner.current, 'mark[data-hl="tts"]'); },
+    currentOffset: () => {
+      const len = chapters[chapter]?.text.length || 0;
+      const sc = scroller();
+      const r = paged ? (pages > 1 ? page / (pages - 1) : 0) : sc ? sc.scrollTop / Math.max(1, sc.scrollHeight - sc.clientHeight) : 0;
+      return { chapter, offset: Math.floor(r * len) };
+    },
     snippetHere: () => {
       const txt = chapters[chapter]?.text || '';
       const r = paged ? (pages > 1 ? page / (pages - 1) : 0) : (() => { const sc = scroller(); return sc ? sc.scrollTop / Math.max(1, sc.scrollHeight - sc.clientHeight) : 0; })();
       const i = Math.floor(r * txt.length);
       return txt.slice(i, i + 90).replace(/\s+/g, ' ').trim();
     },
-  }), [goChapter, next, prev, chapters, chapter, charsBefore, totalChars, paged, page, pages]);
+  }), [goChapter, next, prev, chapters, chapter, charsBefore, totalChars, paged, page, pages, showTts]);
 
   // keyboard
   useEffect(() => {

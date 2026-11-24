@@ -5,7 +5,7 @@ import { countries, countryById, overviews, regions, continents } from '../lib/w
 import { Button, Card, EmptyState, PageTitle, ProgressBar, SectionHeader, Watermark } from '../components/ui';
 import { BookCover } from '../components/books';
 import { BookBrowser } from '../components/BookBrowser';
-import { askClaude } from '../lib/claude';
+import { askClaude, isHostedByClaude } from '../lib/claude';
 import { fmtNum } from '../i18n';
 import { lsGet, lsSet } from '../lib/storage';
 
@@ -105,7 +105,7 @@ export function CountryPage({ id }: { id: string }) {
           {ov ? <p className="max-w-[68ch] leading-relaxed">{ov[lang]}</p> : <p className="text-muted">{t('world.noOverview')}</p>}
           {ai && <div className="mt-4 border-t border-line pt-4"><p className="whitespace-pre-wrap leading-relaxed">{ai}</p><p className="mt-2 text-xs text-muted">{t('ai.label')}</p></div>}
           {err && <p className="mt-2 text-sm text-wine">{err}</p>}
-          <Button size="sm" variant="ghost" className="mt-3" disabled={busy} onClick={ask}><Sparkles size={14} />{busy ? t('ai.working') : t('ai.overview')}</Button>
+          {isHostedByClaude() && <Button size="sm" variant="ghost" className="mt-3" disabled={busy} onClick={ask}><Sparkles size={14} />{busy ? t('ai.working') : t('ai.overview')}</Button>}
         </Card>
         {ov && (
           <Card>

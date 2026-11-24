@@ -2,7 +2,7 @@
 // Layout: data/users/<uid>/lib/<kind>/<id>  (sessions are bucketed per month to stay small)
 import { useStore, onLocalChange } from '../store';
 import { RECORD_KINDS, type RecordKind } from './storage';
-import { useCap } from './claude';
+import { useCap, isHostedByClaude } from './claude';
 
 const SHARDS = 16;
 let db: any = null;
@@ -22,7 +22,7 @@ function strip(kind: RecordKind, r: any) {
 
 export async function startSync() {
   const st = useStore.getState();
-  if (!st.settings.sync) { useStore.setState({ syncState: 'off' }); return; }
+  if (!st.settings.sync || !isHostedByClaude()) { useStore.setState({ syncState: 'off' }); return; }
   useStore.setState({ syncState: 'connecting' });
   const [dbc, user] = await Promise.all([useCap('db'), useCap('user')]);
   const id = user ? await user.id().catch(() => null) : null;

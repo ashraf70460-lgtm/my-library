@@ -5,7 +5,7 @@ import { Button, Card, EmptyState, Field, Modal, PageTitle, ProgressBar, Section
 import { BookGrid, BookCover } from '../components/books';
 import { countries, countryName } from '../lib/world';
 import { genreLabel } from '../lib/genres';
-import { askClaude } from '../lib/claude';
+import { askClaude, isHostedByClaude } from '../lib/claude';
 import { shrinkImage } from '../lib/parse';
 import { fmtNum, fmtDate } from '../i18n';
 import type { AuthorMeta, Book } from '../types';
@@ -127,7 +127,7 @@ export function AuthorPage({ name }: { name: string }) {
             {err && <p className="mt-2 text-sm text-wine">{err}</p>}
             <div className="mt-4 flex flex-wrap gap-2">
               <Button size="sm" variant="outline" onClick={() => setEdit(true)}><Edit3 size={14} />{t('auth.editProfile')}</Button>
-              <Button size="sm" variant="ghost" disabled={busy} onClick={draft}><Sparkles size={14} />{busy ? t('ai.working') : t('ai.draftBio')}</Button>
+              {isHostedByClaude() && <Button size="sm" variant="ghost" disabled={busy} onClick={draft}><Sparkles size={14} />{busy ? t('ai.working') : t('ai.draftBio')}</Button>}
             </div>
           </div>
         </div>

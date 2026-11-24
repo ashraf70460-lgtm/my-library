@@ -4,8 +4,9 @@ import { useStore, useT, useLang, useBooks, useSessions } from '../store';
 import { Button, Card, EmptyState, PageTitle, SectionHeader, Toggle, Watermark } from '../components/ui';
 import { BookCover, Shelf } from '../components/books';
 import { countryName } from '../lib/world';
-import { askClaude } from '../lib/claude';
+import { askClaude, isHostedByClaude } from '../lib/claude';
 import { genreLabel } from '../lib/genres';
+import { BooksToAdd, OnlineRecs, Wishlist } from '../components/Recommendations';
 
 export default function DiscoverPage() {
   const t = useT();
@@ -30,7 +31,7 @@ export default function DiscoverPage() {
     return [...own.entries()].filter(([c, n]) => n >= 1 && (read.get(c) || 0) === 0).sort((a, b) => b[1] - a[1])[0]?.[0];
   }, [books]);
 
-  if (!books.length) return <div><PageTitle title={t('disc.title')} /><EmptyState title={t('disc.empty')} actions={<Button variant="primary" onClick={() => s.navigate({ name: 'import' })}>{t('nav.import')}</Button>} /></div>;
+  if (!books.length) return <div><PageTitle title={t('disc.title')} /><div className="mb-10"><EmptyState title={t('disc.empty')} actions={<Button variant="primary" onClick={() => s.navigate({ name: 'import' })}>{t('nav.import')}</Button>} /></div><BooksToAdd /><Wishlist /></div>;
 
   return (
     <div>
@@ -52,11 +53,14 @@ export default function DiscoverPage() {
           </div>
         </div>
       )}
-      <AskClaude />
+      {isHostedByClaude() && <AskClaude />}
       {forgotten.length > 0 && <section className="mb-10"><SectionHeader title={t('disc.forgotten')} /><Shelf books={forgotten} /></section>}
       {favAuthor && <section className="mb-10"><SectionHeader title={t('disc.byFav', { a: favAuthor })} /><Shelf books={unread.filter((b) => b.authors.includes(favAuthor))} /></section>}
       {unexplored && <section className="mb-10"><SectionHeader title={`${t('disc.unexplored')}: ${countryName(unexplored, lang)}`} action={<Button size="sm" variant="ghost" onClick={() => s.navigate({ name: 'country', id: unexplored })}>{t('seeAll')}</Button>} /><Shelf books={unread.filter((b) => b.countries.includes(unexplored))} /></section>}
       {short.length > 0 && <section className="mb-10"><SectionHeader title={t('disc.short')} /><Shelf books={short} /></section>}
+      <BooksToAdd />
+      <OnlineRecs />
+      <Wishlist />
       {void sessions}
     </div>
   );

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, List, Maximize, Minimize, Pause, Play, Search, Square, Type, X, StickyNote, Loader2, CheckCircle2 } from 'lucide-react';
+import { Headphones, ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, List, Maximize, Minimize, Pause, Play, Search, Square, Type, X, StickyNote, Loader2, CheckCircle2 } from 'lucide-react';
 import { useStore, useT, useLang, useAnnotations, useSessions, uid } from '../store';
 import { loadFile } from '../lib/storage';
 import { openFlow, type FlowContent, CHARS_PER_PAGE, pdfOutline } from '../lib/parse';
@@ -7,13 +7,17 @@ import { getPdfjs } from '../lib/pdf';
 import { FlowReader, type Loc, type ReaderApi } from './FlowReader';
 import { PdfReader } from './PdfReader';
 import { Appearance } from './Appearance';
+import { SoundPanel } from './SoundPanel';
+import { useTts, play as ttsPlay, pause as ttsPause, resume as ttsResume, stop as ttsStop, skip as ttsSkip } from './tts';
+import { stopAll as ambientStop, useAmbient } from './ambient';
+import { cloudReady, downloadBook, useCloud } from '../lib/cloud';
 import { Button, Ring } from '../components/ui';
 import { JournalEditor } from '../pages/Journal';
 import { byDay, dayKey, goalProgress, streaks } from '../lib/stats';
 import { fmtDuration, fmtNum } from '../i18n';
 import type { Annotation, Book, ReaderPrefs, Session } from '../types';
 
-type Panel = null | 'toc' | 'search' | 'look' | 'marks' | 'goto';
+type Panel = null | 'toc' | 'search' | 'look' | 'marks' | 'goto' | 'sound';
 
 export default function Reader({ bookId }: { bookId: string }) {
   const t = useT();
@@ -38,6 +42,24 @@ export default function Reader({ bookId }: { bookId: string }) {
   const isPdf = book?.format === 'pdf';
   const rtl = prefs.direction === 'auto' ? !!(book?.rtl || book?.language === 'ar') : prefs.direction === 'rtl';
   const session = useReadingSession(book);
+  const ttsStatus = useTts((x) => x.status);
+  const dl = useCloud((c) => c.downloads[bookId]);
+  const ambientOn = useAmbient((x) => Object.values(x.volumes).some((v) => v > 0) || !!x.musicOn);
+  useEffect(() => () => { ttsStop(); ambientStop(); }, []);
+  useEffect(() => { if (ttsStatus === 'idle') (api.current as any)?.ttsClear?.(); }, [ttsStatus]);
+  const bookLang = book?.language || (rtl ? 'ar' : 'en');
+  const readAloud = () => {
+    const a: any = api.current;
+    if (!a) return;
+    if (isPdf && pdf) {
+      const start = (a.currentPage?.() || 1) - 1;
+      ttsPlay({ units: pdf.numPages, lang: bookLang, getText: (u) => a.pageText(u + 1), onSentence: (u) => { session.touch(); if ((a.currentPage?.() || 1) !== u + 1) a.gotoPage(u + 1); }, onUnitChange: () => {} }, start, 0);
+    } else if (content) {
+      const pos = a.currentOffset?.() || { chapter: loc.chapter, offset: 0 };
+      ttsPlay({ units: content.chapters.length, lang: bookLang, getText: (u) => content.chapters[u].text, onSentence: (u, st, en) => { session.touch(); a.ttsMark?.(u, st, en); }, onUnitChange: () => {} }, pos.chapter, pos.offset);
+    }
+    setPanel(null);
+  };
 
   // load file
   useEffect(() => {
@@ -46,7 +68,8 @@ export default function Reader({ bookId }: { bookId: string }) {
     let alive = true;
     (async () => {
       try {
-        const file = await loadFile(book.fileHash);
+        let file = await loadFile(book.fileHash);
+        if (!file && book.cloud && cloudReady()) file = await downloadBook(book);
         if (!file) { setErr(t('rd.fileMissing')); return; }
         if (book.format === 'pdf') {
           const pdfjs = await getPdfjs();
@@ -102,6 +125,7 @@ export default function Reader({ bookId }: { bookId: string }) {
   });
 
   const exit = () => {
+    ttsStop();
     const r = session.end();
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* */ }
     if (r && r.secs >= 60) setSummary({ ...r, exit: true });
@@ -132,6 +156,8 @@ export default function Reader({ bookId }: { bookId: string }) {
     setPanel(null);
   };
   const Back = lang === 'ar' ? ArrowRight : ArrowLeft;
+  const SkipBackI = rtl ? ChevronRight : ChevronLeft;
+  const SkipFwdI = rtl ? ChevronLeft : ChevronRight;
   const PrevI = rtl ? ChevronRight : ChevronLeft;
   const NextI = rtl ? ChevronLeft : ChevronRight;
   const remainSecs = totalPages ? (1 - loc.overall) * totalPages * session.secPerPage : 0;
@@ -150,6 +176,7 @@ export default function Reader({ bookId }: { bookId: string }) {
         <RBtn label={t('rd.search')} onClick={() => setPanel(panel === 'search' ? null : 'search')}><Search size={19} /></RBtn>
         <RBtn label={t('rd.bookmark')} onClick={toggleBookmark}>{bookmarkHere ? <BookmarkCheck size={20} style={{ color: 'var(--r-accent)' }} /> : <Bookmark size={20} />}</RBtn>
         <RBtn label={t('rd.annotations')} onClick={() => setPanel(panel === 'marks' ? null : 'marks')}><StickyNote size={19} /></RBtn>
+        <RBtn label={t('snd.title')} onClick={() => setPanel(panel === 'sound' ? null : 'sound')}><Headphones size={19} style={ttsStatus !== 'idle' || ambientOn ? { color: 'var(--r-accent)' } : undefined} /></RBtn>
         <RBtn label={t('rd.appearance')} onClick={() => setPanel(panel === 'look' ? null : 'look')}><Type size={20} /></RBtn>
         <RBtn label={t('rd.full')} onClick={toggleFull} className="hidden sm:inline-flex">{full ? <Minimize size={19} /> : <Maximize size={19} />}</RBtn>
       </div>
@@ -159,7 +186,7 @@ export default function Reader({ bookId }: { bookId: string }) {
         {err ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center"><p>{err}</p><Button onClick={() => s.closeReader()}>{t('close')}</Button></div>
         ) : !content && !pdf ? (
-          <div className="flex h-full items-center justify-center gap-2" style={{ color: 'var(--r-muted)' }}><Loader2 className="animate-spin" size={20} />{t('loading')}</div>
+          <div className="flex h-full items-center justify-center gap-2" style={{ color: 'var(--r-muted)' }}><Loader2 className="animate-spin" size={20} />{dl != null ? `${t('cloud.downloading')} ${Math.round(dl * 100)}%` : t('loading')}</div>
         ) : pdf ? (
           <PdfReader ref={api as any} book={book} doc={pdf} prefs={prefs} rtl={rtl} initialPage={jump?.page ?? book.position?.page ?? 1} onLoc={onLoc} onTapCenter={() => setChrome((c) => !c)} onActivity={activity} />
         ) : (
@@ -172,6 +199,15 @@ export default function Reader({ bookId }: { bookId: string }) {
           </div>
         )}
       </div>
+
+      {ttsStatus !== 'idle' && (
+        <div className="absolute inset-x-0 bottom-24 z-30 mx-auto flex w-fit items-center gap-1 rounded-full px-2 py-1 shadow-lg" style={{ background: 'var(--r-bg)', border: '1px solid var(--r-line)' }}>
+          <RBtn small label={t('previous')} onClick={() => ttsSkip(-1)}><SkipBackI size={15} /></RBtn>
+          <RBtn label={ttsStatus === 'playing' ? t('rd.pause') : t('rd.resume')} onClick={() => (ttsStatus === 'playing' ? ttsPause() : ttsResume())}>{ttsStatus === 'playing' ? <Pause size={18} /> : <Play size={18} />}</RBtn>
+          <RBtn small label={t('next')} onClick={() => ttsSkip(1)}><SkipFwdI size={15} /></RBtn>
+          <RBtn small label={t('snd.stop')} onClick={ttsStop}><X size={15} /></RBtn>
+        </div>
+      )}
 
       {/* bottom bar */}
       <div className={`absolute inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 transition-all duration-300 sm:px-5 ${chrome ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-full opacity-0'}`} style={{ background: 'var(--r-bg)', borderTop: '1px solid var(--r-line)' }}>
@@ -197,13 +233,14 @@ export default function Reader({ bookId }: { bookId: string }) {
         <div className="absolute inset-0 z-50 flex justify-end bg-black/30" onClick={() => setPanel(null)}>
           <div className="fade-in flex h-full w-full max-w-sm flex-col shadow-2xl" style={{ background: 'var(--r-bg)', color: prefs.customFg }} onClick={(e) => e.stopPropagation()} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--r-line)' }}>
-              <h2 className="font-semibold">{{ toc: t('rd.toc'), search: t('rd.search'), look: t('rd.appearance'), marks: t('rd.annotations'), goto: t('rd.goto') }[panel]}</h2>
+              <h2 className="font-semibold">{{ toc: t('rd.toc'), search: t('rd.search'), look: t('rd.appearance'), marks: t('rd.annotations'), goto: t('rd.goto'), sound: t('snd.title') }[panel]}</h2>
               <RBtn label={t('close')} onClick={() => setPanel(null)}><X size={18} /></RBtn>
             </div>
             <div className="scroll-thin flex-1 overflow-y-auto p-4">
               {panel === 'toc' && <Toc book={book} content={content} isPdf={isPdf} cur={isPdf ? loc.page : loc.chapter} go={(x) => { if (isPdf && x.page) api.current?.gotoPage?.(x.page); else if (x.chapter != null) api.current?.goChapter(x.chapter, 0); setPanel(null); }} />}
               {panel === 'search' && <SearchPanel api={api} isPdf={isPdf} close={() => setPanel(null)} />}
               {panel === 'look' && <Appearance prefs={prefs} onChange={setPrefs} pdf={isPdf} />}
+              {panel === 'sound' && <SoundPanel lang={bookLang} onReadFromHere={readAloud} />}
               {panel === 'goto' && <GotoPanel isPdf={isPdf} total={totalPages} api={api} close={() => setPanel(null)} />}
               {panel === 'marks' && <MarksPanel bookId={bookId} ann={bookAnn} isPdf={isPdf} loc={loc} chTitle={chTitle} go={goAnn} />}
             </div>

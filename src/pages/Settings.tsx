@@ -7,6 +7,8 @@ import { exportJson, exportBooksCsv, exportHistoryCsv, exportNotesMd, fullBackup
 import { saveFile, isHostedByClaude } from '../lib/claude';
 import { isPersisted, requestPersist } from '../lib/storage';
 import { pull, startSync } from '../lib/sync';
+import { CloudCard } from '../components/CloudCard';
+import { InstallCard } from '../components/Install';
 
 function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return <Card className="mb-6"><h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">{icon}{title}</h2>{children}</Card>;
@@ -30,6 +32,8 @@ export default function SettingsPage() {
   return (
     <div className="max-w-3xl">
       <PageTitle title={t('set.title')} />
+      <CloudCard />
+      <InstallCard />
       <Section title={t('set.language')}>
         <Segmented value={lang} onChange={(v) => s.setSettings({ lang: v })} options={[{ value: 'ar', label: 'العربية' }, { value: 'en', label: 'English' }]} />
       </Section>

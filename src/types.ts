@@ -52,6 +52,7 @@ export interface Book extends Base {
   position?: { chapter?: number; ratio?: number; page?: number };
   sourceFolder?: string;
   rtl?: boolean;
+  cloud?: boolean; // file stored on the cloud shelf
 }
 
 export interface Annotation extends Base {
@@ -177,4 +178,16 @@ export interface Settings {
   sync: boolean;
   telegram: { token: string; chats: string };
   booksPerYear: number;
+}
+
+export interface WishItem extends Base {
+  title: string;
+  author: string;
+  country?: string;
+  genres?: string[];
+  year?: number;
+  catalogId?: string;
+  olKey?: string;
+  note?: string;
+  addedAt: number;
 }

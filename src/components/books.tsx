@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Check, Heart, MoreHorizontal, FolderPlus, Info, Trash2 } from 'lucide-react';
+import { Cloud, BookOpen, Check, Heart, MoreHorizontal, FolderPlus, Info, Trash2 } from 'lucide-react';
 import type { Book, BookStatus } from '../types';
 import { useStore, useT, useLang, useCollections, useSessions } from '../store';
 import { loadCover } from '../lib/storage';
@@ -96,6 +96,7 @@ export function BookCard({ book, selectable, selected, onSelect }: { book: Book;
         <div className="relative">
           <BookCover book={book} className={`w-full transition-transform group-hover:-translate-y-1 ${selected ? 'ring-4 ring-forest' : ''}`} />
           {book.favorite && <Heart size={16} className="absolute end-2 top-2 z-10 fill-wine text-wine drop-shadow" />}
+          {book.cloud && <span className="absolute bottom-2 end-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/35 text-white"><Cloud size={13} /></span>}
           {book.status === 'reading' && book.progress > 0 && (
             <div className="absolute inset-x-0 bottom-0 z-10 h-1 bg-black/30"><div className="h-full bg-[#c9a46b]" style={{ width: `${book.progress * 100}%` }} /></div>
           )}

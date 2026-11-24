@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Annotation, AuthorMeta, Book, BookStatus, Challenge, Collection, JournalEntry, Lang, Session, Settings } from './types';
+import type { Annotation, AuthorMeta, Book, BookStatus, Challenge, Collection, JournalEntry, Lang, Session, Settings, WishItem } from './types';
 import { RECORD_KINDS, type RecordKind, getAll, put, del, lsGet, lsSet, deleteFile, storageAvailable } from './lib/storage';
 import { translate } from './i18n';
 
@@ -13,6 +13,7 @@ type Maps = {
   collections: Record<string, Collection>;
   authors: Record<string, AuthorMeta>;
   challenges: Record<string, Challenge>;
+  wishlist: Record<string, WishItem>;
 };
 
 export const defaultSettings: Settings = {
@@ -68,7 +69,7 @@ export const uid = (p = '') => p + Date.now().toString(36) + Math.random().toStr
 
 export const useStore = create<State>((set, getS) => ({
   ready: false,
-  books: {}, annotations: {}, sessions: {}, journal: {}, collections: {}, authors: {}, challenges: {},
+  books: {}, annotations: {}, sessions: {}, journal: {}, collections: {}, authors: {}, challenges: {}, wishlist: {},
   settings: lsGet('ml-settings', defaultSettings),
   route: { name: 'home' },
   history: [],
@@ -202,6 +203,7 @@ export const useSessions = () => liveList(useStore((s) => s.sessions));
 export const useJournal = () => liveList(useStore((s) => s.journal));
 export const useCollections = () => liveList(useStore((s) => s.collections));
 export const useChallenges = () => liveList(useStore((s) => s.challenges));
+export const useWishlist = () => liveList(useStore((s) => s.wishlist));
 export const useT = () => { const lang = useStore((s) => s.settings.lang); return (k: string, v?: Record<string, string | number>) => translate(lang, k, v); };
 export const useLang = (): Lang => useStore((s) => s.settings.lang);
 

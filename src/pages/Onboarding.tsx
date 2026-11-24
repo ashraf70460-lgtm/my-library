@@ -4,6 +4,8 @@ import { useStore, useT, useLang, useBooks } from '../store';
 import { Button, Logo, ShelfIllustration, Watermark } from '../components/ui';
 import { enqueue, filesFromInput, useImport } from '../lib/importer';
 import { BookCover } from '../components/books';
+import { BOOK_ACCEPT } from './Import';
+import { isIOS } from '../components/Install';
 
 export default function Onboarding() {
   const t = useT();
@@ -45,8 +47,8 @@ export default function Onboarding() {
     </div>,
     <div key="i" className="text-center"><h2 className="mb-2 text-3xl font-semibold">{t('ob.import')}</h2><p className="mb-6 text-muted">{t('imp.formats')}</p>
       <div className="flex flex-wrap justify-center gap-2">
-        <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full bg-forest px-5 text-ivory"><FileUp size={18} />{t('imp.files')}<input type="file" multiple className="sr-only" accept=".epub,.pdf,.txt,.fb2,.html,.htm,.md" onChange={(e) => enqueue(filesFromInput(e.target.files))} /></label>
-        <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full bg-paper px-5"><FolderOpen size={18} />{t('imp.folder')}<input type="file" multiple className="sr-only" {...({ webkitdirectory: '' } as any)} onChange={(e) => enqueue(filesFromInput(e.target.files))} /></label>
+        <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full bg-forest px-5 text-ivory"><FileUp size={18} />{t('imp.files')}<input type="file" multiple className="sr-only" accept={BOOK_ACCEPT} onChange={(e) => enqueue(filesFromInput(e.target.files))} /></label>
+        {!isIOS() && <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full bg-paper px-5"><FolderOpen size={18} />{t('imp.folder')}<input type="file" multiple className="sr-only" {...({ webkitdirectory: '' } as any)} onChange={(e) => enqueue(filesFromInput(e.target.files))} /></label>}
       </div>
       {(running || items.length > 0) && <p className="mt-4 text-sm text-muted">{t('imp.summary', { a: items.filter((i) => i.status === 'done').length, d: items.filter((i) => i.status === 'duplicate').length, f: items.filter((i) => i.status === 'failed').length })}{running ? ' …' : ''}</p>}
       {books.length > 0 && <div className="mt-5 flex justify-center gap-2">{books.slice(0, 6).map((b) => <BookCover key={b.id} book={b} size="sm" className="w-12" />)}</div>}

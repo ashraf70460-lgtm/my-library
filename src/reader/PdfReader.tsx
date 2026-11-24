@@ -66,6 +66,8 @@ export const PdfReader = forwardRef<ReaderApi, Props>(function PdfReader({ doc, 
     snippetHere: () => (textCache.current.get(page) || '').slice(0, 90).replace(/\s+/g, ' '),
     // extra for PDF
     gotoPage: go,
+    pageText: getText,
+    currentPage: () => page,
     searchAsync: async (q: string, onPartial: (r: any[]) => void) => {
       const needle = q.trim().toLowerCase(); const out: any[] = [];
       if (needle.length < 2) return out;

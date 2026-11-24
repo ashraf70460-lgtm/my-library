@@ -7,6 +7,10 @@ import { enqueue, filesFromDrop, filesFromInput, importFromUrl, useImport, type 
 import { tgCheck, tgDownload, tgFetch, tgState, tgSave, type TgFile } from '../lib/net';
 import { isHostedByClaude } from '../lib/claude';
 import { storageEstimate } from '../lib/storage';
+import { CloudCard } from '../components/CloudCard';
+import { isIOS } from '../components/Install';
+
+export const BOOK_ACCEPT = '.epub,.pdf,.txt,.fb2,.html,.htm,.xhtml,.md,.markdown,.mobi,.azw,.azw3,application/epub+zip,application/pdf,text/plain,text/html,text/markdown,application/x-fictionbook+xml,application/octet-stream';
 
 const fmtSize = (n: number) => (n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' KB');
 
@@ -41,10 +45,11 @@ export default function ImportPage() {
         <div className="relative mb-5 text-muted">{t('imp.or')}</div>
         <div className="relative flex flex-wrap justify-center gap-2">
           <Button variant="primary" onClick={() => fileRef.current?.click()}><FileUp size={18} />{t('imp.files')}</Button>
-          <Button onClick={() => folderRef.current?.click()}><FolderOpen size={18} />{t('imp.folder')}</Button>
+          {!isIOS() && <Button onClick={() => folderRef.current?.click()}><FolderOpen size={18} />{t('imp.folder')}</Button>}
         </div>
-        <input ref={fileRef} type="file" multiple className="hidden" accept=".epub,.pdf,.txt,.fb2,.html,.htm,.xhtml,.md,.markdown,.mobi,.azw,.azw3" onChange={(e) => { enqueue(filesFromInput(e.target.files)); e.target.value = ''; }} />
+        <input ref={fileRef} type="file" multiple className="hidden" accept={BOOK_ACCEPT} onChange={(e) => { enqueue(filesFromInput(e.target.files)); e.target.value = ''; }} />
         <input ref={folderRef} type="file" multiple className="hidden" {...({ webkitdirectory: '', directory: '' } as any)} onChange={(e) => { enqueue(filesFromInput(e.target.files)); e.target.value = ''; }} />
+        {isIOS() && <p className="relative mt-4 max-w-lg text-sm text-muted">{t('imp.ios')}</p>}
         <p className="relative mt-5 max-w-lg text-xs text-muted">{t('imp.unsupported')}</p>
       </div>
 
@@ -69,6 +74,7 @@ export default function ImportPage() {
         </section>
       )}
 
+      <CloudCard />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <h2 className="mb-2 text-lg font-semibold">{t('imp.folderRules')}</h2>
