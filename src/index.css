@@ -1,0 +1,96 @@
+/*
+VOICE: quiet, literary, unhurried — a private reading room, not a dashboard.
+IDEA: a well-kept personal library: shelves, spines, card catalogue, a reading lamp.
+PICTURE: real book covers on shelves (generated typographic covers when none), a shelf-line under rows.
+COLOUR and TYPE: warm ivory paper, charcoal ink, deep forest green lead, burgundy accent; Literata + Inter / Noto Naskh + IBM Plex Sans Arabic.
+LAYOUT: sidebar of sections, generous content column, compact right panel on wide screens; bottom bar on phones.
+*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --c-ivory: 246 241 231; --c-paper: 238 230 215; --c-card: 252 249 243; --c-ink: 35 33 30; --c-muted: 110 103 92;
+  --c-line: 221 211 194; --c-forest: 47 79 62; --c-olive: 107 116 69; --c-brown: 122 90 58; --c-wine: 123 45 53;
+  --f-serif: 'Literata', 'Source Serif 4', Georgia, serif;
+  --f-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+}
+:root.dark {
+  --c-ivory: 23 26 23; --c-paper: 30 34 30; --c-card: 36 41 36; --c-ink: 233 226 210; --c-muted: 165 158 142;
+  --c-line: 54 60 52; --c-forest: 141 180 154; --c-olive: 169 178 122; --c-brown: 196 154 108; --c-wine: 214 128 136;
+  color-scheme: dark;
+}
+:root[lang='ar'] {
+  --f-serif: 'Noto Naskh Arabic', 'Amiri', 'Literata', serif;
+  --f-sans: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;
+}
+
+* { -webkit-tap-highlight-color: transparent; min-width: 0; }
+html, body, #root { height: 100%; }
+body { margin: 0; background: rgb(var(--c-ivory)); color: rgb(var(--c-ink)); font-family: var(--f-sans); font-size: 16px; line-height: 1.55; overflow: hidden; }
+:root[lang='ar'] body { font-size: 16.5px; line-height: 1.75; }
+h1, h2, h3, .serif { font-family: var(--f-serif); }
+h1 { text-wrap: balance; }
+button, input, select, textarea { font: inherit; color: inherit; }
+input, select, textarea { font-size: 16px; }
+:focus-visible { outline: 2px solid rgb(var(--c-forest)); outline-offset: 2px; border-radius: 6px; }
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: rgb(var(--c-line)); border-radius: 8px; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+.paper-grain { background-image: radial-gradient(rgb(var(--c-ink) / 0.025) 1px, transparent 1px); background-size: 3px 3px; }
+.shelf { position: relative; }
+.shelf::after { content: ''; position: absolute; inset-inline: 0; bottom: -10px; height: 8px; border-radius: 2px;
+  background: linear-gradient(rgb(var(--c-brown) / 0.35), rgb(var(--c-brown) / 0.18)); box-shadow: 0 6px 10px -6px rgb(0 0 0 / 0.35); }
+.book-shadow { box-shadow: 0 1px 1px rgb(0 0 0 / 0.08), 0 6px 14px -6px rgb(0 0 0 / 0.35), inset 3px 0 0 rgb(255 255 255 / 0.12); }
+.spine::before { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; width: 7%; background: linear-gradient(90deg, rgb(0 0 0 / 0.18), transparent); z-index: 1; pointer-events: none; }
+[dir='rtl'] .spine::before { background: linear-gradient(-90deg, rgb(0 0 0 / 0.18), transparent); }
+
+.watermark { position: absolute; pointer-events: none; user-select: none; font-family: var(--f-serif); font-style: italic; color: rgb(var(--c-ink) / 0.045); white-space: nowrap; }
+
+.field { width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 10px; border: 1px solid rgb(var(--c-line)); background: rgb(var(--c-card)); }
+.field:focus { outline: none; border-color: rgb(var(--c-forest)); box-shadow: 0 0 0 3px rgb(var(--c-forest) / 0.15); }
+textarea.field { min-height: 110px; line-height: 1.6; }
+
+.fade-in { animation: fadeIn .25s ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .fade-in { animation: none; } * { transition: none !important; } }
+
+/* ---------- Reader ---------- */
+.reader-root { --r-bg: #f8f3e8; --r-fg: #2b2620; --r-muted: #8a7f70; --r-line: #e4dac8; --r-accent: #2f4f3e; }
+.reader-root[data-theme='paper'] { --r-bg: #fbfaf6; --r-fg: #26241f; --r-muted: #8d877b; --r-line: #e8e4da; }
+.reader-root[data-theme='ivory'] { --r-bg: #f6efdf; --r-fg: #2c261d; --r-muted: #8b7f6b; --r-line: #e3d7bf; }
+.reader-root[data-theme='sepia'] { --r-bg: #ecdfc4; --r-fg: #4a3826; --r-muted: #8f7558; --r-line: #d8c6a3; --r-accent: #7a4e2a; }
+.reader-root[data-theme='light'] { --r-bg: #ffffff; --r-fg: #1d1d1f; --r-muted: #8a8a8e; --r-line: #e7e7ea; }
+.reader-root[data-theme='dark'] { --r-bg: #1f2124; --r-fg: #dcd8d0; --r-muted: #8b8780; --r-line: #34373b; --r-accent: #9cc3a9; }
+.reader-root[data-theme='night'] { --r-bg: #0d0d0c; --r-fg: #b9b1a2; --r-muted: #6e685e; --r-line: #262522; --r-accent: #c9a46b; }
+.reader-root[data-theme='forest'] { --r-bg: #1d2a22; --r-fg: #dfe6d6; --r-muted: #93a593; --r-line: #31443a; --r-accent: #d9c58f; }
+.reader-root[data-theme='gray'] { --r-bg: #e9e9e6; --r-fg: #2a2a28; --r-muted: #7f7f7a; --r-line: #d3d3cf; }
+.reader-root { background: var(--r-bg); color: var(--r-fg); }
+
+.prose-book { font-size: var(--fs); line-height: var(--lh); text-align: var(--ta); hyphens: auto; overflow-wrap: break-word; }
+.prose-book p { margin: 0 0 calc(var(--ps) * 1em); }
+.prose-book h1, .prose-book h2, .prose-book h3 { line-height: 1.3; margin: 1.4em 0 .8em; font-weight: 600; text-align: start; break-after: avoid; }
+.prose-book h1 { font-size: 1.6em; } .prose-book h2 { font-size: 1.35em; } .prose-book h3 { font-size: 1.15em; }
+.prose-book img { max-width: 100%; max-height: calc(var(--page-h, 80vh) - 40px); height: auto; display: block; margin: 1em auto; break-inside: avoid; }
+.prose-book blockquote { margin: 1em 0; padding-inline-start: 1em; border-inline-start: 3px solid var(--r-line); color: var(--r-muted); }
+.prose-book a { color: var(--r-accent); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.prose-book [data-href], .prose-book [data-anchor] { color: var(--r-accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.prose-book table { border-collapse: collapse; margin: 1em 0; } .prose-book td, .prose-book th { border: 1px solid var(--r-line); padding: 4px 8px; }
+.prose-book pre { white-space: pre-wrap; }
+.prose-book hr { border: 0; border-top: 1px solid var(--r-line); margin: 2em 20%; }
+.prose-book sup { font-size: .7em; }
+.paged .prose-book { column-fill: auto; height: 100%; }
+
+mark.hl { color: inherit; border-radius: 2px; padding: 0 1px; cursor: pointer; }
+mark.hl-yellow { background: rgb(250 214 90 / .45); } mark.hl-blue { background: rgb(110 170 230 / .40); }
+mark.hl-green { background: rgb(130 200 130 / .40); } mark.hl-pink { background: rgb(240 140 180 / .40); }
+mark.hl-orange { background: rgb(245 165 90 / .45); } mark.hl-search { background: rgb(47 79 62 / .30); outline: 2px solid rgb(47 79 62 / .5); }
+mark.hl.has-note { text-decoration: underline dotted; text-underline-offset: 4px; }
+
+.pdf-page { position: relative; margin: 0 auto 16px; box-shadow: 0 2px 10px rgb(0 0 0 / .18); background: #fff; }
+.pdf-page canvas { display: block; width: 100%; height: 100%; }
+.reader-root[data-theme='dark'] .pdf-page canvas, .reader-root[data-theme='night'] .pdf-page canvas, .reader-root[data-theme='forest'] .pdf-page canvas { filter: invert(.9) hue-rotate(180deg); }
+.reader-root[data-theme='sepia'] .pdf-page canvas, .reader-root[data-theme='ivory'] .pdf-page canvas { filter: sepia(.35); }

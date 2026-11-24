@@ -1,0 +1,157 @@
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import type { Book, ReaderPrefs } from '../types';
+import type { Loc, ReaderApi } from './FlowReader';
+
+interface Props {
+  book: Book;
+  doc: any;
+  prefs: ReaderPrefs;
+  rtl: boolean;
+  initialPage: number;
+  onLoc: (l: Loc) => void;
+  onTapCenter: () => void;
+  onActivity: () => void;
+}
+
+export const PdfReader = forwardRef<ReaderApi, Props>(function PdfReader({ doc, prefs, rtl, initialPage, onLoc, onTapCenter, onActivity }, ref) {
+  const n = doc.numPages as number;
+  const outer = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  const [ratio, setRatio] = useState(1.414);
+  const [page, setPage] = useState(Math.min(n, Math.max(1, initialPage)));
+  const textCache = useRef(new Map<number, string>());
+  const single = prefs.pdfMode === 'single';
+
+  useEffect(() => {
+    doc.getPage(1).then((p: any) => { const v = p.getViewport({ scale: 1 }); setRatio(v.height / v.width); });
+    const el = outer.current!;
+    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [doc]);
+
+  const pageW = Math.max(200, Math.min(width - 24, 900) * prefs.pdfZoom);
+  const pageH = pageW * ratio;
+
+  const report = useCallback((p: number) => { setPage(p); onLoc({ chapter: 0, ratio: 0, overall: n > 1 ? (p - 1) / (n - 1) : 1, page: p, pages: n }); }, [n, onLoc]);
+
+  const go = useCallback((p: number) => {
+    const target = Math.max(1, Math.min(n, p));
+    if (single) report(target);
+    else {
+      const el = outer.current?.querySelector(`[data-page="${target}"]`) as HTMLElement | null;
+      if (el && outer.current) outer.current.scrollTop = el.offsetTop - 12;
+      report(target);
+    }
+  }, [n, single, report]);
+
+  // initial scroll
+  useEffect(() => { if (width) requestAnimationFrame(() => go(page)); }, [width > 0, single, prefs.pdfZoom]);
+
+  const getText = async (p: number) => {
+    if (textCache.current.has(p)) return textCache.current.get(p)!;
+    const tc = await (await doc.getPage(p)).getTextContent();
+    const s = tc.items.map((i: any) => i.str + (i.hasEOL ? '\n' : '')).join(' ');
+    textCache.current.set(p, s);
+    return s;
+  };
+
+  useImperativeHandle(ref, () => ({
+    goChapter: (_i: number, _r?: number) => {},
+    next: () => go(page + 1),
+    prev: () => go(page - 1),
+    gotoOverall: (f: number) => go(Math.round(f * (n - 1)) + 1),
+    search: () => [],
+    showMatch: (p: number) => go(p),
+    snippetHere: () => (textCache.current.get(page) || '').slice(0, 90).replace(/\s+/g, ' '),
+    // extra for PDF
+    gotoPage: go,
+    searchAsync: async (q: string, onPartial: (r: any[]) => void) => {
+      const needle = q.trim().toLowerCase(); const out: any[] = [];
+      if (needle.length < 2) return out;
+      for (let p = 1; p <= n; p++) {
+        const txt = await getText(p); const low = txt.toLowerCase();
+        let i = low.indexOf(needle);
+        while (i >= 0 && out.length < 300) { out.push({ chapter: p, start: i, end: i + needle.length, snippet: '…' + txt.slice(Math.max(0, i - 50), i + needle.length + 60).replace(/\s+/g, ' ') + '…' }); i = low.indexOf(needle, i + needle.length); }
+        if (p % 10 === 0) onPartial([...out]);
+      }
+      return out;
+    },
+  }) as any, [go, page, n]);
+
+  // keyboard
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).closest('input,textarea,select')) return;
+      const fwd = rtl ? 'ArrowLeft' : 'ArrowRight', back = rtl ? 'ArrowRight' : 'ArrowLeft';
+      if (e.key === fwd || e.key === 'PageDown') { e.preventDefault(); go(page + 1); onActivity(); }
+      else if (e.key === back || e.key === 'PageUp') { e.preventDefault(); go(page - 1); onActivity(); }
+    };
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [go, page, rtl, onActivity]);
+
+  const onScroll = () => {
+    onActivity();
+    if (single || !outer.current) return;
+    const top = outer.current.scrollTop + outer.current.clientHeight / 3;
+    const p = Math.min(n, Math.max(1, Math.floor(top / (pageH + 16)) + 1));
+    if (p !== page) report(p);
+  };
+
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const onClick = (e: React.MouseEvent) => {
+    if (!single) { onTapCenter(); return; }
+    const box = outer.current!.getBoundingClientRect();
+    const x = (e.clientX - box.left) / box.width;
+    if (x < 0.28) go(rtl ? page + 1 : page - 1);
+    else if (x > 0.72) go(rtl ? page - 1 : page + 1);
+    else onTapCenter();
+  };
+
+  return (
+    <div ref={outer} className="scroll-thin h-full w-full overflow-auto py-14" onScroll={onScroll} onClick={onClick}
+      onTouchStart={(e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
+      onTouchEnd={(e) => { const st = touch.current; touch.current = null; if (!st || !single) return; const dx = e.changedTouches[0].clientX - st.x; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.changedTouches[0].clientY - st.y) * 1.5) go(dx < 0 ? (rtl ? page - 1 : page + 1) : (rtl ? page + 1 : page - 1)); }}>
+      {width > 0 && (single ? (
+        <PdfPage key={page} doc={doc} num={page} w={pageW} h={pageH} eager />
+      ) : (
+        [...Array(n)].map((_, i) => <PdfPage key={i} doc={doc} num={i + 1} w={pageW} h={pageH} />)
+      ))}
+    </div>
+  );
+});
+
+function PdfPage({ doc, num, w, h, eager }: { doc: any; num: number; w: number; h: number; eager?: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [visible, setVisible] = useState(!!eager);
+  useEffect(() => {
+    if (eager) return;
+    const el = ref.current!;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { rootMargin: '1200px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [eager]);
+  useEffect(() => {
+    if (!visible) { const c = canvas.current; if (c) { c.width = 0; c.height = 0; } return; }
+    let task: any; let cancelled = false;
+    doc.getPage(num).then((p: any) => {
+      if (cancelled) return;
+      const base = p.getViewport({ scale: 1 });
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const vp = p.getViewport({ scale: (w / base.width) * dpr });
+      const c = canvas.current!;
+      c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+      task = p.render({ canvasContext: c.getContext('2d')!, viewport: vp });
+      task.promise.catch(() => {});
+    });
+    return () => { cancelled = true; task?.cancel?.(); };
+  }, [visible, w, doc, num]);
+  return (
+    <div ref={ref} data-page={num} className="pdf-page" style={{ width: w, height: h }}>
+      <canvas ref={canvas} />
+      <span className="absolute -bottom-5 start-1/2 -translate-x-1/2 text-[11px] opacity-50">{num}</span>
+    </div>
+  );
+}
