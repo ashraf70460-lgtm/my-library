@@ -35,7 +35,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/|api/|icons/|sw.js|manifest.webmanifest).*)",
+      "source": "/((?!assets/|api/|icons/|screenshots/|sw.js|manifest.webmanifest).*)",
       "destination": "/index.html"
     }
   ],

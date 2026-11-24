@@ -229,7 +229,7 @@ const en: Dict = {
   'cloud.connectToGet': 'This book is on your cloud shelf. Connect this device in Settings to download it.', 'cloud.save': 'Save to cloud', 'cloud.remove': 'Remove from cloud',
   // pwa
   'pwa.title': 'Install My Library as an app', 'pwa.body': 'Open it from your home screen or desktop like any app, full screen and even offline.',
-  'pwa.install': 'Install app', 'pwa.done': 'My Library is installed on this device.',
+  'pwa.install': 'Install app', 'pwa.short': 'Add an icon to your home screen or desktop and open it like any app — full screen, even offline.', 'pwa.iosShort': 'In Safari, tap Share, then “Add to Home Screen”', 'pwa.done': 'My Library is installed on this device.',
   'pwa.ios': 'On iPad or iPhone: open this page in Safari, tap Share, then “Add to Home Screen”.',
   'pwa.chrome': 'On a computer: in Chrome or Edge, click the install icon at the right of the address bar.',
   'pwa.android': 'On Android: open the browser menu (⋮) and choose “Install app” or “Add to Home screen”.',
@@ -435,7 +435,7 @@ const ar: Dict = {
   'cloud.notHere': 'هذا الكتاب على رفك السحابي لكنه ليس على هذا الجهاز بعد.', 'cloud.download': 'تنزيل إلى هذا الجهاز', 'cloud.downloading': 'جارٍ التنزيل',
   'cloud.connectToGet': 'هذا الكتاب على رفك السحابي. اربط هذا الجهاز من الإعدادات لتنزيله.', 'cloud.save': 'حفظ في السحابة', 'cloud.remove': 'إزالة من السحابة',
   'pwa.title': 'ثبّت «مكتبتي» كتطبيق', 'pwa.body': 'افتحها من الشاشة الرئيسية أو سطح المكتب كأي تطبيق، بملء الشاشة وحتى دون اتصال.',
-  'pwa.install': 'تثبيت التطبيق', 'pwa.done': '«مكتبتي» مثبتة على هذا الجهاز.',
+  'pwa.install': 'تثبيت التطبيق', 'pwa.short': 'أضف أيقونة إلى الشاشة الرئيسية أو سطح المكتب وافتحها كأي تطبيق — بملء الشاشة وحتى دون اتصال.', 'pwa.iosShort': 'في Safari اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية»', 'pwa.done': '«مكتبتي» مثبتة على هذا الجهاز.',
   'pwa.ios': 'على iPad أو iPhone: افتح هذه الصفحة في Safari، اضغط «مشاركة» ثم «إضافة إلى الشاشة الرئيسية».',
   'pwa.chrome': 'على الحاسوب: في Chrome أو Edge اضغط أيقونة التثبيت يمين شريط العنوان.',
   'pwa.android': 'على أندرويد: افتح قائمة المتصفح (⋮) واختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».',

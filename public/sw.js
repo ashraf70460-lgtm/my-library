@@ -1,5 +1,5 @@
 // My Library service worker: lets the app open offline and load fast.
-const VERSION = 'ml-v3';
+const VERSION = 'ml-v4';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png'];
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).catch(() => {})); });
 self.addEventListener('activate', (e) => {

@@ -6,6 +6,7 @@ import { ContinueCard, Shelf, BookCover } from '../components/books';
 import { byDay, dayKey, addDays, goalProgress, streaks } from '../lib/stats';
 import { fmtDate, fmtNum } from '../i18n';
 import type { Book } from '../types';
+import { InstallBanner } from '../components/Install';
 
 const PROMPTS: { en: string; ar: string }[] = [
   { en: 'Which character from your current book would you most like to argue with — and about what?', ar: 'أي شخصية في كتابك الحالي تودّ أن تجادلها، وفي أي شيء؟' },
@@ -37,6 +38,7 @@ export default function HomePage() {
   if (!books.length) {
     return (
       <div>
+        <InstallBanner />
         <Hero />
         <EmptyState
           title={t('home.empty.title')}
@@ -58,6 +60,7 @@ export default function HomePage() {
   return (
     <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0">
+        <InstallBanner />
         <Hero stats={[
           { icon: <Flame size={16} />, label: t('home.streak'), value: `${fmtNum(lang, st.current)} ${t('home.days')}` },
           { icon: <Library size={16} />, label: t('home.total'), value: fmtNum(lang, books.length) },

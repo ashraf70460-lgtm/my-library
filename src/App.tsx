@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useStore, useT, useLang, useCollections, useSessions } from './store';
 import { Logo, Toasts, IconButton } from './components/ui';
-import { InstallButton } from './components/Install';
+import { InstallButton, InstallIcon } from './components/Install';
 import { startSync } from './lib/sync';
 import { startCloud, useCloud } from './lib/cloud';
 import { storageAvailable } from './lib/storage';
@@ -175,6 +175,7 @@ export default function App() {
             <SearchIcon size={16} />{t('search.placeholder')}<kbd className="ms-auto rounded border border-line px-1.5 text-[11px]">/</kbd>
           </button>
           <div className="ms-auto flex items-center gap-1">
+            <InstallIcon />
             <IconButton className="sm:hidden" label={t('nav.search')} onClick={() => s.navigate({ name: 'search' })}><SearchIcon size={20} /></IconButton>
             <IconButton label={t('set.theme')} onClick={toggleTheme}>{document.documentElement.classList.contains('dark') ? <Sun size={19} /> : <Moon size={19} />}</IconButton>
             <button type="button" onClick={() => s.setSettings({ lang: lang === 'ar' ? 'en' : 'ar' })} className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-line px-3 text-sm hover:bg-paper" aria-label={t('set.language')}>

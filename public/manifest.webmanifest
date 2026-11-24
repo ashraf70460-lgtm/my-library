@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "My Library — مكتبتي",
   "short_name": "My Library",
   "description": "Your personal bilingual library and e-book reader",
@@ -9,11 +10,99 @@
   "background_color": "#f6f1e7",
   "theme_color": "#2f4f3e",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "file_handlers": [
-    { "action": "./", "accept": { "application/epub+zip": [".epub"], "application/pdf": [".pdf"], "text/plain": [".txt"] } }
+    {
+      "action": "./",
+      "accept": {
+        "application/epub+zip": [
+          ".epub"
+        ],
+        "application/pdf": [
+          ".pdf"
+        ],
+        "text/plain": [
+          ".txt"
+        ]
+      }
+    }
+  ],
+  "lang": "ar",
+  "dir": "auto",
+  "categories": [
+    "books",
+    "education",
+    "productivity"
+  ],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "shortcuts": [
+    {
+      "name": "Continue reading — متابعة القراءة",
+      "short_name": "Continue",
+      "url": "/#continue",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Import books — استيراد الكتب",
+      "short_name": "Import",
+      "url": "/#import",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Discover — اكتشف",
+      "short_name": "Discover",
+      "url": "/#discover",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "My Library on a laptop"
+    },
+    {
+      "src": "screenshots/narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "My Library on a phone or tablet"
+    }
   ]
 }
