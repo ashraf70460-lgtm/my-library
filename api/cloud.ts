@@ -91,9 +91,9 @@ async function handler(request: Request): Promise<Response> {
         if (!hash) return json({ error: 'bad hash' }, 400);
         const path = `${ROOT}/books/${hash}`;
         if (request.method === 'DELETE' || url.searchParams.get('delete') === '1') { await del(path); return json({ ok: true }); }
-        const r = await get(path, { access: 'private' });
+        const r = await get(path, { access: 'private', useCache: false });
         if (!r || r.statusCode !== 200) return json({ error: 'not found' }, 404);
-        return new Response(r.stream, { headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(r.blob.size ?? ''), 'Cache-Control': 'private, no-cache', 'X-Content-Type-Options': 'nosniff' } });
+        return new Response(r.stream as ReadableStream, { headers: { 'Content-Type': 'application/octet-stream', 'X-Blob-Size': String(r.blob.size), 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' } });
       }
 
       case 'usage': {

@@ -224,7 +224,7 @@ export async function downloadBook(b: Book): Promise<Blob> {
   useCloud.setState((s) => ({ downloads: { ...s.downloads, [b.id]: 0 } }));
   try {
     const r = await api('file', {}, `&hash=${b.fileHash}`);
-    const total = Number(r.headers.get('content-length')) || b.fileSize || 0;
+    const total = Number(r.headers.get('x-blob-size')) || b.fileSize || 0;
     const reader = r.body!.getReader();
     const chunks: Uint8Array[] = []; let got = 0;
     for (;;) {
@@ -234,6 +234,7 @@ export async function downloadBook(b: Book): Promise<Blob> {
       if (total) useCloud.setState((s) => ({ downloads: { ...s.downloads, [b.id]: got / total } }));
     }
     const blob = new Blob(chunks as BlobPart[]);
+    if (!blob.size) throw new Error('empty download');
     await saveFile(b.fileHash, blob);
     return blob;
   } finally {
