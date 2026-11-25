@@ -24,3 +24,16 @@ export function getPdfjs(): Promise<any> {
   }
   return p;
 }
+
+/** Options that let PDF.js draw fonts a PDF does not carry itself (common in Arabic books made in Word). */
+export function pdfDocOptions(data: Uint8Array) {
+  const base = (p: string) => new URL(p, document.baseURI).href;
+  return {
+    data,
+    isEvalSupported: false,
+    cMapUrl: base('./pdfjs/cmaps/'),
+    cMapPacked: true,
+    standardFontDataUrl: base('./pdfjs/standard_fonts/'),
+    useSystemFonts: true,
+  };
+}

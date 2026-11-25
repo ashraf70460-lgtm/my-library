@@ -3,7 +3,7 @@ import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import type { Book, BookFormat, TocItem } from '../types';
 import { normalizeGenre } from './genres';
-import { getPdfjs } from './pdf';
+import { getPdfjs, pdfDocOptions } from './pdf';
 
 export interface Chapter { title: string; html: string; text: string }
 export interface FlowContent { kind: 'flow'; chapters: Chapter[]; toc: TocItem[]; cleanup: () => void }
@@ -397,7 +397,7 @@ const junkTitle = (t?: string) => !t || /^(microsoft word|untitled|document|\d+|
 
 async function extractPdf(file: Blob, base: Partial<Book>, guess: { title: string; author?: string }): Promise<ParsedMeta> {
   const pdfjs = await getPdfjs();
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  const doc = await pdfjs.getDocument(pdfDocOptions(new Uint8Array(await file.arrayBuffer()))).promise;
   try {
     const meta: Partial<Book> = { ...base, pages: doc.numPages };
     try {

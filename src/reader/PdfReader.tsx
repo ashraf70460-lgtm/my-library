@@ -1,6 +1,8 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { Book, ReaderPrefs } from '../types';
 import type { Loc, ReaderApi } from './FlowReader';
+import { pageBlocks, normaliseText, type PageBlock } from '../lib/pdftext';
+import { fontCss } from './Appearance';
 
 interface Props {
   book: Book;
@@ -20,7 +22,8 @@ export const PdfReader = forwardRef<ReaderApi, Props>(function PdfReader({ doc, 
   const [ratio, setRatio] = useState(1.414);
   const [page, setPage] = useState(Math.min(n, Math.max(1, initialPage)));
   const textCache = useRef(new Map<number, string>());
-  const single = prefs.pdfMode === 'single';
+  const textMode = !!prefs.pdfText;
+  const single = prefs.pdfMode === 'single' && !textMode;
 
   useEffect(() => {
     doc.getPage(1).then((p: any) => { const v = p.getViewport({ scale: 1 }); setRatio(v.height / v.width); });
@@ -46,12 +49,12 @@ export const PdfReader = forwardRef<ReaderApi, Props>(function PdfReader({ doc, 
   }, [n, single, report]);
 
   // initial scroll
-  useEffect(() => { if (width) requestAnimationFrame(() => go(page)); }, [width > 0, single, prefs.pdfZoom]);
+  useEffect(() => { if (width) requestAnimationFrame(() => go(page)); }, [width > 0, single, prefs.pdfZoom, textMode]);
 
   const getText = async (p: number) => {
     if (textCache.current.has(p)) return textCache.current.get(p)!;
     const tc = await (await doc.getPage(p)).getTextContent();
-    const s = tc.items.map((i: any) => i.str + (i.hasEOL ? '\n' : '')).join(' ');
+    const s = normaliseText(tc.items.map((i: any) => i.str + (i.hasEOL ? '\n' : '')).join(' '));
     textCache.current.set(p, s);
     return s;
   };
@@ -97,7 +100,10 @@ export const PdfReader = forwardRef<ReaderApi, Props>(function PdfReader({ doc, 
     onActivity();
     if (single || !outer.current) return;
     const top = outer.current.scrollTop + outer.current.clientHeight / 3;
-    const p = Math.min(n, Math.max(1, Math.floor(top / (pageH + 16)) + 1));
+    let p = 1;
+    if (textMode) {
+      for (const el of Array.from(outer.current.querySelectorAll<HTMLElement>('[data-page]'))) { if (el.offsetTop <= top) p = Number(el.dataset.page); else break; }
+    } else p = Math.min(n, Math.max(1, Math.floor(top / (pageH + 16)) + 1));
     if (p !== page) report(p);
   };
 
@@ -115,7 +121,11 @@ export const PdfReader = forwardRef<ReaderApi, Props>(function PdfReader({ doc, 
     <div ref={outer} className="scroll-thin h-full w-full overflow-auto py-14" onScroll={onScroll} onClick={onClick}
       onTouchStart={(e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; }}
       onTouchEnd={(e) => { const st = touch.current; touch.current = null; if (!st || !single) return; const dx = e.changedTouches[0].clientX - st.x; if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.changedTouches[0].clientY - st.y) * 1.5) go(dx < 0 ? (rtl ? page - 1 : page + 1) : (rtl ? page + 1 : page - 1)); }}>
-      {width > 0 && (single ? (
+      {width > 0 && textMode ? (
+        <div className="mx-auto" style={{ width: Math.max(200, Math.min(prefs.width, width - prefs.margin * 2)) }}>
+          {[...Array(n)].map((_, i) => <PdfTextPage key={i} doc={doc} num={i + 1} prefs={prefs} rtl={rtl} />)}
+        </div>
+      ) : width > 0 && (single ? (
         <PdfPage key={page} doc={doc} num={page} w={pageW} h={pageH} eager />
       ) : (
         [...Array(n)].map((_, i) => <PdfPage key={i} doc={doc} num={i + 1} w={pageW} h={pageH} />)
@@ -141,8 +151,11 @@ function PdfPage({ doc, num, w, h, eager }: { doc: any; num: number; w: number; 
     doc.getPage(num).then((p: any) => {
       if (cancelled) return;
       const base = p.getViewport({ scale: 1 });
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      const vp = p.getViewport({ scale: (w / base.width) * dpr });
+      const dpr = Math.min(3, window.devicePixelRatio || 1);
+      const maxPx = 14_000_000; // keep within mobile canvas limits
+      let scale = (w / base.width) * dpr;
+      if (base.width * base.height * scale * scale > maxPx) scale = Math.sqrt(maxPx / (base.width * base.height));
+      const vp = p.getViewport({ scale });
       const c = canvas.current!;
       c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
       task = p.render({ canvasContext: c.getContext('2d')!, viewport: vp });
@@ -155,5 +168,38 @@ function PdfPage({ doc, num, w, h, eager }: { doc: any; num: number; w: number; 
       <canvas ref={canvas} />
       <span className="absolute -bottom-5 start-1/2 -translate-x-1/2 text-[11px] opacity-50">{num}</span>
     </div>
+  );
+}
+
+const blockCache = new WeakMap<object, Map<number, PageBlock[]>>();
+
+function PdfTextPage({ doc, num, prefs, rtl }: { doc: any; num: number; prefs: ReaderPrefs; rtl: boolean }) {
+  const ref = useRef<HTMLElement>(null);
+  const [blocks, setBlocks] = useState<PageBlock[] | null>(() => blockCache.get(doc)?.get(num) ?? null);
+  useEffect(() => {
+    if (blocks) return;
+    const el = ref.current!;
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      doc.getPage(num).then((p: any) => pageBlocks(p)).then((b: PageBlock[]) => {
+        if (!blockCache.has(doc)) blockCache.set(doc, new Map());
+        blockCache.get(doc)!.set(num, b);
+        setBlocks(b);
+      }).catch(() => setBlocks([]));
+    }, { rootMargin: '1500px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [doc, num, blocks]);
+  const style: React.CSSProperties = {
+    ['--fs' as any]: `${prefs.fontSize}px`, ['--lh' as any]: prefs.lineHeight, ['--ps' as any]: prefs.paraSpacing, ['--ta' as any]: prefs.justify ? 'justify' : 'start',
+    fontFamily: fontCss(prefs.fontFamily, rtl), color: prefs.customFg || undefined,
+  };
+  return (
+    <section ref={ref} data-page={num} className="prose-book" dir={rtl ? 'rtl' : 'ltr'} style={{ ...style, minHeight: blocks ? undefined : '80vh' }}>
+      {blocks?.map((b, i) => (b.type === 'h' ? <h3 key={i} dir="auto">{b.text}</h3> : <p key={i} dir="auto">{b.text}</p>))}
+      {blocks && !blocks.length && <p style={{ color: 'var(--r-muted)' }} className="text-center text-sm">—</p>}
+      <div className="my-6 flex items-center gap-3 text-xs" style={{ color: 'var(--r-muted)' }} dir="ltr"><span className="h-px flex-1" style={{ background: 'var(--r-line)' }} />{num}<span className="h-px flex-1" style={{ background: 'var(--r-line)' }} /></div>
+    </section>
   );
 }

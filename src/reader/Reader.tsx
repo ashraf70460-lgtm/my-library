@@ -3,7 +3,7 @@ import { Headphones, ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, ChevronLeft
 import { useStore, useT, useLang, useAnnotations, useSessions, uid } from '../store';
 import { loadFile } from '../lib/storage';
 import { openFlow, type FlowContent, CHARS_PER_PAGE, pdfOutline } from '../lib/parse';
-import { getPdfjs } from '../lib/pdf';
+import { getPdfjs, pdfDocOptions } from '../lib/pdf';
 import { FlowReader, type Loc, type ReaderApi } from './FlowReader';
 import { PdfReader } from './PdfReader';
 import { Appearance } from './Appearance';
@@ -25,8 +25,12 @@ export default function Reader({ bookId }: { bookId: string }) {
   const s = useStore();
   const book = useStore((st) => st.books[bookId]);
   const jump = useStore((st) => st.readerJump);
-  const prefs = s.settings.reader;
-  const setPrefs = (p: Partial<ReaderPrefs>) => s.setSettings({ reader: { ...prefs, ...p } });
+  const basePrefs = s.settings.reader;
+  const prefs: ReaderPrefs = book?.pdfView ? { ...basePrefs, pdfText: book.pdfView === 'text' } : basePrefs;
+  const setPrefs = (p: Partial<ReaderPrefs>) => {
+    if ('pdfText' in p && book) { s.updateBook(book.id, { pdfView: p.pdfText ? 'text' : 'page' }); const { pdfText, ...rest } = p; if (!Object.keys(rest).length) return; p = rest; }
+    s.setSettings({ reader: { ...basePrefs, ...p } });
+  };
   const [content, setContent] = useState<FlowContent | null>(null);
   const [pdf, setPdf] = useState<any>(null);
   const [err, setErr] = useState('');
@@ -73,7 +77,7 @@ export default function Reader({ bookId }: { bookId: string }) {
         if (!file) { setErr(t('rd.fileMissing')); return; }
         if (book.format === 'pdf') {
           const pdfjs = await getPdfjs();
-          const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+          const doc = await pdfjs.getDocument(pdfDocOptions(new Uint8Array(await file.arrayBuffer()))).promise;
           if (!alive) { doc.destroy(); return; }
           setPdf(doc);
           cleanup = () => doc.destroy();
@@ -191,6 +195,13 @@ export default function Reader({ bookId }: { bookId: string }) {
           <PdfReader ref={api as any} book={book} doc={pdf} prefs={prefs} rtl={rtl} initialPage={jump?.page ?? book.position?.page ?? 1} onLoc={onLoc} onTapCenter={() => setChrome((c) => !c)} onActivity={activity} />
         ) : (
           <FlowReader ref={api} book={book} chapters={content!.chapters} prefs={prefs} rtl={rtl} initial={jump && (jump.chapter != null) ? { chapter: jump.chapter, ratio: jump.ratio, start: jump.start } : null} annotations={bookAnn} onLoc={onLoc} onTapCenter={() => setChrome((c) => !c)} onActivity={activity} />
+        )}
+        {pdf && !book.pdfView && (book.language === 'ar' || rtl) && window.matchMedia?.('(pointer: coarse)').matches && (
+          <div className="absolute inset-x-3 top-16 z-30 mx-auto flex max-w-md flex-wrap items-center gap-2 rounded-2xl px-4 py-3 text-sm shadow-lg" style={{ background: 'var(--r-bg)', border: '1px solid var(--r-line)' }} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+            <span className="min-w-[160px] flex-1">{t('rd.pdfTip')}</span>
+            <button type="button" className="rounded-full px-3 py-1.5 text-white" style={{ background: 'var(--r-accent)' }} onClick={() => setPrefs({ pdfText: true })}>{t('rd.pdfTipBtn')}</button>
+            <button type="button" aria-label={t('close')} className="rounded-full p-1.5 opacity-70" onClick={() => s.updateBook(book.id, { pdfView: 'page' })}><X size={15} /></button>
+          </div>
         )}
         {finished && (content || pdf) && (
           <div className="absolute inset-x-0 bottom-24 z-30 mx-auto flex w-fit items-center gap-3 rounded-full bg-forest px-4 py-2 text-sm text-ivory shadow-lg">

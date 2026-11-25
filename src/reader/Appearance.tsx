@@ -47,9 +47,21 @@ export function Appearance({ prefs, onChange, pdf }: { prefs: ReaderPrefs; onCha
       </div>
       {pdf ? (
         <>
+          <div className="mb-2 text-sm font-medium">{t('rd.pdfView')}</div>
+          <div className="mb-1"><Segmented value={prefs.pdfText ? 'text' : 'page'} onChange={(v) => onChange({ pdfText: v === 'text' })} options={[{ value: 'page', label: t('rd.pdfPage') }, { value: 'text', label: t('rd.pdfTextView') }]} /></div>
+          <p className="mb-4 text-xs opacity-70">{t('rd.pdfTextHint')}</p>
+          {prefs.pdfText && <>
+            <label className="mb-3 block"><span className="mb-1 block text-sm font-medium">{t('rd.font')}</span>
+              <select className="field" value={prefs.fontFamily} onChange={(e) => onChange({ fontFamily: e.target.value })}>{FONTS.map((f) => <option key={f.id} value={f.id}>{f.id === 'auto' ? t('rd.auto') : f.label}</option>)}</select>
+            </label>
+            <Slider label={t('rd.size')} value={prefs.fontSize} min={13} max={34} step={1} onChange={(v) => onChange({ fontSize: v })} />
+            <Slider label={t('rd.lineHeight')} value={prefs.lineHeight} min={1.2} max={2.4} step={0.05} onChange={(v) => onChange({ lineHeight: v })} fmt={(v) => v.toFixed(2)} />
+          </>}
+          {!prefs.pdfText && <>
           <div className="mb-2 text-sm font-medium">{t('rd.mode')}</div>
           <div className="mb-4"><Segmented value={prefs.pdfMode} onChange={(v) => onChange({ pdfMode: v })} options={[{ value: 'scroll', label: t('rd.scroll') }, { value: 'single', label: t('rd.single') }]} /></div>
           <Slider label={t('rd.zoom')} value={prefs.pdfZoom} min={0.5} max={3} step={0.1} onChange={(v) => onChange({ pdfZoom: v })} fmt={(v) => Math.round(v * 100) + '%'} />
+          </>}
         </>
       ) : (
         <>

@@ -1,5 +1,5 @@
 // My Library service worker: lets the app open offline and load fast.
-const VERSION = 'ml-v4';
+const VERSION = 'ml-v5';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png'];
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).catch(() => {})); });
 self.addEventListener('activate', (e) => {
@@ -16,7 +16,7 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(fetch(req).then((r) => { const copy = r.clone(); caches.open(VERSION).then((c) => c.put('./index.html', copy)); return r; }).catch(() => caches.match('./index.html')));
     return;
   }
-  if ((sameOrigin && url.pathname.startsWith('/assets/')) || fonts || (sameOrigin && url.pathname.startsWith('/icons/'))) {
+  if ((sameOrigin && url.pathname.startsWith('/assets/')) || fonts || (sameOrigin && (url.pathname.startsWith('/icons/') || url.pathname.startsWith('/pdfjs/')))) {
     e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((r) => { if (r.ok || r.type === 'opaque') { const copy = r.clone(); caches.open(VERSION).then((c) => c.put(req, copy)); } return r; })));
   }
 });

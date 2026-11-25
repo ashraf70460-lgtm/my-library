@@ -53,6 +53,7 @@ export interface Book extends Base {
   sourceFolder?: string;
   rtl?: boolean;
   cloud?: boolean; // file stored on the cloud shelf
+  pdfView?: 'page' | 'text'; // remembered PDF display for this book
 }
 
 export interface Annotation extends Base {
@@ -163,6 +164,7 @@ export interface ReaderPrefs {
   customFg?: string;
   pdfZoom: number;
   pdfMode: 'scroll' | 'single';
+  pdfText?: boolean; // show PDFs as reflowed text
 }
 
 export interface Settings {

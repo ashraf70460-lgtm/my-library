@@ -31,11 +31,20 @@
           "value": "no-cache"
         }
       ]
+    },
+    {
+      "source": "/pdfjs/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=2592000"
+        }
+      ]
     }
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/|api/|icons/|screenshots/|sw.js|manifest.webmanifest).*)",
+      "source": "/((?!assets/|api/|icons/|screenshots/|pdfjs/|sw.js|manifest.webmanifest).*)",
       "destination": "/index.html"
     }
   ],
