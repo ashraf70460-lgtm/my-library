@@ -181,15 +181,25 @@ export const FlowReader = forwardRef<ReaderApi, Props>(function FlowReader({ boo
     else setChapter(i);
   }, [chapters.length, chapter, restore]);
 
+  // gentle page-turn effect in paged mode (skipped when the system asks for reduced motion)
+  const turnFx = (fwd: boolean) => {
+    if (!prefs.pageTurn || !paged) return;
+    try { if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch { /* */ }
+    const el = scroller(); if (!el) return;
+    const sign = (fwd ? 1 : -1) * (rtl ? -1 : 1);
+    el.animate?.([{ transform: `perspective(1400px) translateX(${sign * 48}px) rotateY(${-sign * 7}deg)`, opacity: 0.35, transformOrigin: sign > 0 ? 'left center' : 'right center' }, { transform: 'none', opacity: 1 }], { duration: 300, easing: 'cubic-bezier(.2,.7,.2,1)' });
+  };
   const next = useCallback(() => {
+    turnFx(true);
     if (paged && page < pages - 1) goPage(page + 1);
     else if (chapter < chapters.length - 1) goChapter(chapter + 1, 0);
     else if (paged) goPage(pages - 1);
-  }, [paged, page, pages, chapter, chapters.length, goPage, goChapter]);
+  }, [paged, page, pages, chapter, chapters.length, goPage, goChapter, prefs.pageTurn, rtl]);
   const prev = useCallback(() => {
+    turnFx(false);
     if (paged && page > 0) goPage(page - 1);
     else if (chapter > 0) goChapter(chapter - 1, 1);
-  }, [paged, page, chapter, goPage, goChapter]);
+  }, [paged, page, chapter, goPage, goChapter, prefs.pageTurn, rtl]);
 
   useImperativeHandle(ref, () => ({
     goChapter: (i, ratio, start) => goChapter(i, ratio ?? 0, start),

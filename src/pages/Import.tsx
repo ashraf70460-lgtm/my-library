@@ -10,7 +10,7 @@ import { storageEstimate } from '../lib/storage';
 import { CloudCard } from '../components/CloudCard';
 import { isIOS } from '../components/Install';
 
-export const BOOK_ACCEPT = '.epub,.pdf,.txt,.fb2,.html,.htm,.xhtml,.md,.markdown,.mobi,.azw,.azw3,application/epub+zip,application/pdf,text/plain,text/html,text/markdown,application/x-fictionbook+xml,application/octet-stream';
+export const BOOK_ACCEPT = '.epub,.pdf,.docx,.txt,.fb2,.html,.htm,.xhtml,.md,.markdown,.mobi,.azw,.azw3,application/epub+zip,application/pdf,text/plain,text/html,text/markdown,application/x-fictionbook+xml,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/octet-stream';
 
 const fmtSize = (n: number) => (n > 1e6 ? (n / 1e6).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1e3)) + ' KB');
 

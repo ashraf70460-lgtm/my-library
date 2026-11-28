@@ -1,7 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import {
   Home, Library, BookOpen, Feather, Globe2, Shapes, Layers, NotebookPen, Highlighter, BarChart3, Compass, Download, Settings as SettingsIcon,
-  Search as SearchIcon, MoreHorizontal, Languages, ArrowLeft, ArrowRight, Bell, X, Moon, Sun, Pin,
+  Search as SearchIcon, MoreHorizontal, Languages, ArrowLeft, ArrowRight, Bell, X, Moon, Sun, Pin, Heart, Flag, Map as MapIcon,
 } from 'lucide-react';
 import { useStore, useT, useLang, useCollections, useSessions } from './store';
 import { Logo, Toasts, IconButton } from './components/ui';
@@ -9,12 +9,14 @@ import { InstallButton, InstallIcon } from './components/Install';
 import { startSync } from './lib/sync';
 import { startCloud, useCloud } from './lib/cloud';
 import { storageAvailable } from './lib/storage';
+import { ensureRestorePoint } from './lib/backup';
 import { byDay, dayKey } from './lib/stats';
 import HomePage from './pages/Home';
 import BooksPage from './pages/Books';
 import { ContinuePage } from './pages/Continue';
 import { AuthorsPage, AuthorPage } from './pages/Authors';
-import { WorldPage, CountryPage } from './pages/World';
+import { WorldPage, CountryPage, CountriesPage } from './pages/World';
+import FavoritesPage from './pages/Favorites';
 import { GenresPage, GenrePage } from './pages/Genres';
 import { CollectionsPage, CollectionPage } from './pages/Collections';
 import JournalPage from './pages/Journal';
@@ -29,13 +31,23 @@ import Onboarding from './pages/Onboarding';
 
 let started = false;
 const Reader = lazy(() => import('./reader/Reader'));
+const WorldMapPage = lazy(() => import('./pages/WorldMap'));
 
 export const NAV = [
-  { name: 'home', icon: Home }, { name: 'books', icon: Library }, { name: 'continue', icon: BookOpen }, { name: 'authors', icon: Feather },
-  { name: 'world', icon: Globe2 }, { name: 'genres', icon: Shapes }, { name: 'collections', icon: Layers }, { name: 'journal', icon: NotebookPen },
-  { name: 'notes', icon: Highlighter }, { name: 'stats', icon: BarChart3 }, { name: 'discover', icon: Compass }, { name: 'import', icon: Download },
-  { name: 'settings', icon: SettingsIcon },
+  { name: 'home', icon: Home }, { name: 'books', icon: Library }, { name: 'continue', icon: BookOpen }, { name: 'favorites', icon: Heart },
+  { name: 'collections', icon: Layers }, { name: 'authors', icon: Feather },
+  { name: 'world', icon: Globe2 }, { name: 'countries', icon: Flag }, { name: 'map', icon: MapIcon }, { name: 'genres', icon: Shapes }, { name: 'discover', icon: Compass },
+  { name: 'journal', icon: NotebookPen }, { name: 'notes', icon: Highlighter }, { name: 'stats', icon: BarChart3 },
+  { name: 'import', icon: Download }, { name: 'settings', icon: SettingsIcon },
 ] as const;
+
+/** Sidebar groups (every section stays; they are just arranged under small headings). */
+export const NAV_GROUPS: { id: string; items: string[] }[] = [
+  { id: 'library', items: ['home', 'books', 'continue', 'favorites', 'collections', 'authors'] },
+  { id: 'explore', items: ['world', 'countries', 'map', 'genres', 'discover'] },
+  { id: 'reading', items: ['journal', 'notes', 'stats'] },
+  { id: 'tools', items: ['import', 'settings'] },
+];
 
 const parentOf: Record<string, string> = { author: 'authors', country: 'world', genre: 'genres', tag: 'genres', collection: 'collections', book: 'books', search: '' };
 
@@ -48,7 +60,7 @@ export default function App() {
   const sessions = useSessions();
   const pinned = useCollections().filter((c) => c.pinned);
 
-  useEffect(() => { if (started) return; started = true; s.init().then(() => { startSync(); startCloud(); }); }, []);
+  useEffect(() => { if (started) return; started = true; s.init().then(() => { ensureRestorePoint().finally(() => { startSync(); startCloud(); }); }); }, []);
   useEffect(() => {
     const root = document.documentElement;
     root.lang = lang; root.dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -115,6 +127,9 @@ export default function App() {
       case 'authors': return <AuthorsPage />;
       case 'author': return <AuthorPage name={r.id!} />;
       case 'world': return <WorldPage />;
+      case 'countries': return <CountriesPage />;
+      case 'map': return <Suspense fallback={<div className="text-muted">{t('loading')}</div>}><WorldMapPage /></Suspense>;
+      case 'favorites': return <FavoritesPage />;
       case 'country': return <CountryPage id={r.id!} />;
       case 'genres': return <GenresPage />;
       case 'genre': return <GenrePage id={r.id!} />;
@@ -145,11 +160,16 @@ export default function App() {
           <span><span className="serif block text-xl font-semibold leading-none">{t('brand')}</span><span className="text-xs text-muted">{t('tagline')}</span></span>
         </button>
         <nav className="scroll-thin flex-1 overflow-y-auto px-3 pb-4" aria-label={t('nav.sections')}>
-          {NAV.map(({ name, icon: Icon }) => (
-            <button key={name} type="button" onClick={() => s.navigate({ name })} aria-current={active === name ? 'page' : undefined}
-              className={`mb-0.5 flex min-h-[40px] w-full items-center gap-3 rounded-lg px-3 text-start text-[15px] transition-colors ${active === name ? 'bg-forest text-ivory' : 'hover:bg-line/60'}`}>
-              <Icon size={18} strokeWidth={1.8} />{t('nav.' + name)}
-            </button>
+          {NAV_GROUPS.map((g, gi) => (
+            <div key={g.id} className={gi ? 'mt-3' : ''}>
+              <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted">{t('navg.' + g.id)}</div>
+              {g.items.map((name) => { const Icon = NAV.find((x) => x.name === name)!.icon; return (
+                <button key={name} type="button" onClick={() => s.navigate({ name })} aria-current={active === name ? 'page' : undefined}
+                  className={`mb-0.5 flex min-h-[36px] w-full items-center gap-3 rounded-lg px-3 text-start text-[15px] transition-colors ${active === name ? 'bg-forest text-ivory' : 'hover:bg-line/60'}`}>
+                  <Icon size={18} strokeWidth={1.8} />{t('nav.' + name)}
+                </button>
+              ); })}
+            </div>
           ))}
           {pinned.length > 0 && <div className="mx-3 mb-1 mt-4 h-px bg-line" />}
           {pinned.map((c) => (
@@ -215,12 +235,19 @@ export default function App() {
           <div className="fixed inset-0 z-50 bg-black/40 lg:hidden" onClick={() => setMoreOpen(false)}>
             <div className="fade-in absolute inset-x-0 bottom-0 rounded-t-2xl bg-card p-4 pb-[calc(env(safe-area-inset-bottom)+16px)]" onClick={(e) => e.stopPropagation()}>
               <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-line" />
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {[...NAV.filter((n) => !['home', 'books', 'continue', 'discover'].includes(n.name)).map((n) => ({ ...n, label: t('nav.' + n.name), go: () => s.navigate({ name: n.name }) })),
-                  ...pinned.map((c) => ({ name: c.id, icon: Pin, label: c.name, go: () => s.navigate({ name: 'collection', id: c.id }) }))].map(({ name, icon: Icon, label, go }) => (
-                  <button key={name} type="button" onClick={() => { go(); setMoreOpen(false); }} className="flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-xl bg-paper/70 px-1 text-center text-xs">
-                    <Icon size={20} strokeWidth={1.8} /><span className="line-clamp-2" dir="auto">{label}</span>
-                  </button>
+              <div className="scroll-thin max-h-[70vh] overflow-y-auto">
+                {[...NAV_GROUPS.map((g) => ({ id: g.id, items: g.items.filter((n) => !['home', 'books', 'continue', 'discover'].includes(n)).map((n) => ({ name: n, icon: NAV.find((x) => x.name === n)!.icon as any, label: t('nav.' + n), go: () => s.navigate({ name: n }) })) })),
+                  ...(pinned.length ? [{ id: 'pinned', items: pinned.map((c) => ({ name: c.id, icon: Pin as any, label: c.name, go: () => s.navigate({ name: 'collection', id: c.id }) })) }] : [])].filter((g) => g.items.length).map((g) => (
+                  <div key={g.id} className="mb-3">
+                    <div className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-muted">{t('navg.' + g.id)}</div>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                      {g.items.map(({ name, icon: Icon, label, go }) => (
+                        <button key={name} type="button" onClick={() => { go(); setMoreOpen(false); }} className="flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl bg-paper/70 px-1 text-center text-xs">
+                          <Icon size={20} strokeWidth={1.8} /><span className="line-clamp-2" dir="auto">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
               <div className="mt-3"><SyncBadge /></div>

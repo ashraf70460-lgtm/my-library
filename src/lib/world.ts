@@ -1,7 +1,7 @@
 // Geography of literature: regions, countries, and short literary overviews.
 export type RegionId =
   | 'east-asia' | 'south-asia' | 'southeast-asia' | 'central-asia' | 'middle-east'
-  | 'western-europe' | 'eastern-europe' | 'russia-eurasia' | 'north-africa' | 'subsaharan-africa'
+  | 'western-europe' | 'northern-europe' | 'southern-europe' | 'eastern-europe' | 'russia-eurasia' | 'north-africa' | 'subsaharan-africa'
   | 'north-america' | 'latin-america' | 'oceania';
 
 export type Continent = 'asia' | 'europe' | 'africa' | 'north-america' | 'south-america' | 'oceania';
@@ -21,7 +21,9 @@ export const regions: { id: RegionId; en: string; ar: string; continent: Contine
   { id: 'southeast-asia', en: 'Southeast Asia', ar: 'جنوب شرق آسيا', continent: 'asia' },
   { id: 'central-asia', en: 'Central Asia', ar: 'آسيا الوسطى', continent: 'asia' },
   { id: 'middle-east', en: 'Middle East', ar: 'الشرق الأوسط', continent: 'asia' },
-  { id: 'western-europe', en: 'Europe', ar: 'أوروبا', continent: 'europe' },
+  { id: 'western-europe', en: 'Western Europe', ar: 'أوروبا الغربية', continent: 'europe' },
+  { id: 'northern-europe', en: 'Northern Europe', ar: 'أوروبا الشمالية', continent: 'europe' },
+  { id: 'southern-europe', en: 'Southern Europe', ar: 'أوروبا الجنوبية', continent: 'europe' },
   { id: 'eastern-europe', en: 'Eastern Europe', ar: 'أوروبا الشرقية', continent: 'europe' },
   { id: 'russia-eurasia', en: 'Russia & Eurasia', ar: 'روسيا وأوراسيا', continent: 'europe' },
   { id: 'north-africa', en: 'North Africa', ar: 'شمال أفريقيا', continent: 'africa' },
@@ -50,7 +52,7 @@ export const countries: Country[] = [
   c('cz', 'Czechia', 'التشيك', 'Czech Literature', 'الأدب التشيكي', ['eastern-europe'], '🇨🇿', ['czech', 'تشيكي']),
   c('hu', 'Hungary', 'المجر', 'Hungarian Literature', 'الأدب المجري', ['eastern-europe'], '🇭🇺', ['hungarian', 'مجري']),
   c('ro', 'Romania', 'رومانيا', 'Romanian Literature', 'الأدب الروماني', ['eastern-europe'], '🇷🇴', ['romanian']),
-  c('rs', 'Balkans', 'البلقان', 'Balkan Literature', 'أدب البلقان', ['eastern-europe'], '🏔️', ['balkan', 'serbian', 'bosnian', 'albanian', 'ألباني', 'صربي']),
+  c('rs', 'Balkans', 'البلقان', 'Balkan Literature', 'أدب البلقان', ['southern-europe', 'eastern-europe'], '🏔️', ['balkan', 'serbian', 'bosnian', 'albanian', 'ألباني', 'صربي']),
   c('jp', 'Japan', 'اليابان', 'Japanese Literature', 'الأدب الياباني', ['east-asia'], '🇯🇵', ['japanese', 'ياباني', 'اليابانية', 'الياباني']),
   c('cn', 'China', 'الصين', 'Chinese Literature', 'الأدب الصيني', ['east-asia'], '🇨🇳', ['chinese', 'صيني', 'الصيني']),
   c('kr', 'Korea', 'كوريا', 'Korean Literature', 'الأدب الكوري', ['east-asia'], '🇰🇷', ['korean', 'كوري', 'الكوري']),
@@ -62,7 +64,7 @@ export const countries: Country[] = [
   c('vn', 'Vietnam', 'فيتنام', 'Vietnamese Literature', 'الأدب الفيتنامي', ['southeast-asia'], '🇻🇳', ['vietnamese']),
   c('id', 'Indonesia', 'إندونيسيا', 'Indonesian Literature', 'الأدب الإندونيسي', ['southeast-asia'], '🇮🇩', ['indonesian']),
   c('ph', 'Philippines', 'الفلبين', 'Philippine Literature', 'الأدب الفلبيني', ['southeast-asia'], '🇵🇭', ['filipino']),
-  c('tr', 'Turkey', 'تركيا', 'Turkish Literature', 'الأدب التركي', ['middle-east', 'western-europe'], '🇹🇷', ['turkish', 'تركي', 'التركي']),
+  c('tr', 'Turkey', 'تركيا', 'Turkish Literature', 'الأدب التركي', ['middle-east', 'southern-europe'], '🇹🇷', ['turkish', 'تركي', 'التركي']),
   c('arab', 'Arab World', 'العالم العربي', 'Arabic Literature', 'الأدب العربي', ['middle-east', 'north-africa'], '📜', ['arabic', 'arab', 'عربي', 'العربي', 'العربية']),
   c('sa', 'Saudi Arabia', 'السعودية', 'Saudi Literature', 'الأدب السعودي', ['middle-east'], '🇸🇦', ['saudi', 'سعودي']),
   c('iq', 'Iraq', 'العراق', 'Iraqi Literature', 'الأدب العراقي', ['middle-east'], '🇮🇶', ['iraqi', 'عراقي']),
@@ -79,11 +81,11 @@ export const countries: Country[] = [
   c('fr', 'France', 'فرنسا', 'French Literature', 'الأدب الفرنسي', ['western-europe'], '🇫🇷', ['french', 'فرنسي', 'الفرنسي']),
   c('de', 'Germany', 'ألمانيا', 'German Literature', 'الأدب الألماني', ['western-europe'], '🇩🇪', ['german', 'ألماني', 'الألماني', 'austrian', 'نمساوي']),
   c('gb', 'Britain & Ireland', 'بريطانيا وأيرلندا', 'British Literature', 'الأدب البريطاني', ['western-europe'], '🇬🇧', ['british', 'english literature', 'irish', 'scottish', 'بريطاني', 'إنجليزي', 'الإنجليزي', 'أيرلندي']),
-  c('it', 'Italy', 'إيطاليا', 'Italian Literature', 'الأدب الإيطالي', ['western-europe'], '🇮🇹', ['italian', 'إيطالي']),
-  c('es', 'Spain', 'إسبانيا', 'Spanish Literature', 'الأدب الإسباني', ['western-europe'], '🇪🇸', ['spanish', 'إسباني', 'الإسباني']),
-  c('pt', 'Portugal', 'البرتغال', 'Portuguese Literature', 'الأدب البرتغالي', ['western-europe'], '🇵🇹', ['portuguese', 'برتغالي']),
-  c('gr', 'Greece', 'اليونان', 'Greek Literature', 'الأدب اليوناني', ['western-europe'], '🇬🇷', ['greek', 'يوناني', 'الإغريقي']),
-  c('nordic', 'Nordic Countries', 'دول الشمال', 'Scandinavian Literature', 'الأدب الإسكندنافي', ['western-europe'], '❄️', ['scandinavian', 'norwegian', 'swedish', 'danish', 'finnish', 'icelandic', 'إسكندنافي', 'نرويجي', 'سويدي']),
+  c('it', 'Italy', 'إيطاليا', 'Italian Literature', 'الأدب الإيطالي', ['southern-europe'], '🇮🇹', ['italian', 'إيطالي']),
+  c('es', 'Spain', 'إسبانيا', 'Spanish Literature', 'الأدب الإسباني', ['southern-europe'], '🇪🇸', ['spanish', 'إسباني', 'الإسباني']),
+  c('pt', 'Portugal', 'البرتغال', 'Portuguese Literature', 'الأدب البرتغالي', ['southern-europe'], '🇵🇹', ['portuguese', 'برتغالي']),
+  c('gr', 'Greece', 'اليونان', 'Greek Literature', 'الأدب اليوناني', ['southern-europe'], '🇬🇷', ['greek', 'يوناني', 'الإغريقي']),
+  c('nordic', 'Nordic Countries', 'دول الشمال', 'Scandinavian Literature', 'الأدب الإسكندنافي', ['northern-europe'], '❄️', ['scandinavian', 'norwegian', 'swedish', 'danish', 'finnish', 'icelandic', 'إسكندنافي', 'نرويجي', 'سويدي']),
   c('us', 'United States', 'الولايات المتحدة', 'American Literature', 'الأدب الأمريكي', ['north-america'], '🇺🇸', ['american', 'أمريكي', 'الأمريكي']),
   c('ca', 'Canada', 'كندا', 'Canadian Literature', 'الأدب الكندي', ['north-america'], '🇨🇦', ['canadian', 'كندي']),
   c('latam', 'Latin America', 'أمريكا اللاتينية', 'Latin American Literature', 'أدب أمريكا اللاتينية', ['latin-america'], '🌎', ['latin american', 'لاتيني', 'اللاتينية', 'أمريكا الجنوبية']),
@@ -234,4 +236,19 @@ export function countryName(id: string, lang: 'en' | 'ar') {
 export function litName(id: string, lang: 'en' | 'ar') {
   const co = countryById(id);
   return co ? co.lit[lang] : id;
+}
+
+export const regionById = (id: string) => regions.find((r) => r.id === id);
+
+/** Literary period of a publication year (year strings such as "1866" or "c. 1900"). */
+export const periods = [
+  { id: 'classical', en: 'Before 1800', ar: 'قبل ١٨٠٠', from: -9999, to: 1799 },
+  { id: '19c', en: '19th century', ar: 'القرن التاسع عشر', from: 1800, to: 1899 },
+  { id: '20c', en: '20th century', ar: 'القرن العشرون', from: 1900, to: 1999 },
+  { id: '21c', en: '21st century', ar: 'القرن الحادي والعشرون', from: 2000, to: 9999 },
+];
+export function periodOf(year?: string): string | undefined {
+  const y = Number(String(year || '').match(/-?\d{3,4}/)?.[0]);
+  if (!y) return undefined;
+  return periods.find((p) => y >= p.from && y <= p.to)?.id;
 }

@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, Download, Flame, Link2, Library, RefreshCw, Quote, Sparkles, BookPlus, CheckCircle2, Clock, PenLine, Heart } from 'lucide-react';
-import { useStore, useT, useLang, useBooks, useSessions, useAnnotations } from '../store';
+import { BookOpen, Download, Flame, Link2, Library, RefreshCw, Quote, Sparkles, BookPlus, CheckCircle2, Clock, PenLine, Heart, Feather, Flag, Globe2, Hourglass, Layers, Map as MapIcon } from 'lucide-react';
+import { useStore, useT, useLang, useBooks, useSessions, useAnnotations, useCollections } from '../store';
+import { countryById, countries as allCountries } from '../lib/world';
+import { genreLabel } from '../lib/genres';
+import { Monogram } from './Authors';
+import { useFavoriteAuthors } from './Favorites';
 import { Button, Card, EmptyState, Ring, SectionHeader, Watermark } from '../components/ui';
 import { ContinueCard, Shelf, BookCover } from '../components/books';
 import { byDay, dayKey, addDays, goalProgress, streaks } from '../lib/stats';
@@ -23,7 +27,8 @@ export default function HomePage() {
   const s = useStore();
   const t = useT();
   const lang = useLang();
-  const books = useBooks();
+  const allBooks = useBooks();
+  const books = useMemo(() => allBooks.filter((b) => !b.archived), [allBooks]);
   const sessions = useSessions();
   const days = useMemo(() => byDay(sessions), [sessions]);
   const today = days.get(dayKey());
@@ -35,7 +40,7 @@ export default function HomePage() {
   const recent = useMemo(() => [...books].sort((a, b) => b.addedAt - a.addedAt).slice(0, 14), [books]);
   const recommended = useMemo(() => recommend(books), [books]);
 
-  if (!books.length) {
+  if (!allBooks.length) {
     return (
       <div>
         <InstallBanner />
@@ -90,6 +95,9 @@ export default function HomePage() {
           <Shelf books={recent} />
         </section>
 
+        <LibraryAtAGlance books={books} sessions={sessions} />
+        <MoreShelves books={books} />
+
         <section className="mb-10 xl:hidden"><Inspiration /></section>
         <section className="xl:hidden"><Activity /></section>
       </div>
@@ -100,6 +108,78 @@ export default function HomePage() {
         <Activity />
       </aside>
     </div>
+  );
+}
+
+function LibraryAtAGlance({ books, sessions }: { books: Book[]; sessions: { seconds: number }[] }) {
+  const t = useT();
+  const lang = useLang();
+  const s = useStore();
+  const authors = new Set(books.flatMap((b) => b.authors)).size;
+  const cs = [...new Set(books.flatMap((b) => b.countries))];
+  const regions = new Set(cs.flatMap((c) => countryById(c)?.regions || [])).size;
+  const hours = Math.round(sessions.reduce((a, x) => a + x.seconds, 0) / 3600);
+  const items = [
+    { icon: <Library size={16} />, label: t('nav.books'), v: books.length, go: 'books' },
+    { icon: <Feather size={16} />, label: t('nav.authors'), v: authors, go: 'authors' },
+    { icon: <Flag size={16} />, label: t('nav.countries'), v: cs.length, go: 'countries' },
+    { icon: <Globe2 size={16} />, label: t('home.regions'), v: regions, go: 'map' },
+    { icon: <Hourglass size={16} />, label: t('home.hours'), v: hours, go: 'stats' },
+  ];
+  return (
+    <section className="mb-10">
+      <SectionHeader title={t('home.glance')} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {items.map((x) => (
+          <button key={x.label} type="button" onClick={() => s.navigate({ name: x.go })} className="rounded-2xl border border-line bg-card px-4 py-3 text-start hover:border-forest/40">
+            <div className="flex items-center gap-1.5 text-xs text-muted">{x.icon}{x.label}</div>
+            <div className="serif mt-0.5 text-2xl font-semibold">{fmtNum(lang, x.v)}</div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MoreShelves({ books }: { books: Book[] }) {
+  const t = useT();
+  const lang = useLang();
+  const s = useStore();
+  const cols = useCollections();
+  const { marked, auto } = useFavoriteAuthors();
+  const favAuthors = [...marked, ...auto].slice(0, 10);
+  const opened = useMemo(() => books.filter((b) => b.lastOpenedAt).sort((a, b) => b.lastOpenedAt! - a.lastOpenedAt!).slice(0, 14), [books]);
+  const done = useMemo(() => books.filter((b) => b.status === 'completed').sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)).slice(0, 14), [books]);
+  const favs = useMemo(() => books.filter((b) => b.favorite).sort((a, b) => (b.favoritedAt || 0) - (a.favoritedAt || 0)).slice(0, 14), [books]);
+  const ctry = useMemo(() => { const m = new Map<string, number>(); books.forEach((b) => b.countries.forEach((c) => m.set(c, (m.get(c) || 0) + 1))); return [...m.entries()].sort((a, b) => b[1] - a[1]); }, [books]);
+  const gen = useMemo(() => { const m = new Map<string, number>(); books.forEach((b) => b.genres.forEach((g) => m.set(g, (m.get(g) || 0) + 1))); return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14); }, [books]);
+  const chip = 'inline-flex min-h-[36px] items-center gap-2 rounded-full border border-line bg-card px-3 text-sm hover:border-forest/40';
+  return (
+    <>
+      {opened.length > 0 && <section className="mb-10"><SectionHeader title={t('home.opened')} /><Shelf books={opened} /></section>}
+      {done.length > 0 && <section className="mb-10"><SectionHeader title={t('home.completed')} /><Shelf books={done} /></section>}
+      {favs.length > 0 && <section className="mb-10"><SectionHeader title={t('home.favBooks')} action={<Button variant="ghost" size="sm" onClick={() => s.navigate({ name: 'favorites' })}>{t('seeAll')}</Button>} /><Shelf books={favs} /></section>}
+      {favAuthors.length > 0 && (
+        <section className="mb-10"><SectionHeader title={t('fav.authors')} />
+          <div className="flex flex-wrap gap-2">{favAuthors.map((a) => <button key={a.name} type="button" className={chip + ' ps-1'} onClick={() => s.navigate({ name: 'author', id: a.name })}><Monogram name={a.name} portrait={a.meta?.portrait} size={28} /><span dir="auto">{a.name}</span></button>)}</div>
+        </section>
+      )}
+      <section className="mb-10"><SectionHeader title={t('home.exploreCountries')} action={<Button variant="ghost" size="sm" onClick={() => s.navigate({ name: 'map' })}><MapIcon size={15} />{t('nav.map')}</Button>} />
+        <div className="flex flex-wrap gap-2">
+          {(ctry.length ? ctry.slice(0, 12).map(([c, n]) => ({ c, n })) : allCountries.slice(0, 8).map((c) => ({ c: c.id, n: 0 }))).map(({ c, n }) => { const co = countryById(c); return co ? <button key={c} type="button" className={chip} onClick={() => s.navigate({ name: 'country', id: c })}><span aria-hidden="true">{co.flag}</span>{co.lit[lang]}{n ? <span className="text-muted">{fmtNum(lang, n)}</span> : null}</button> : null; })}
+        </div>
+      </section>
+      {gen.length > 0 && (
+        <section className="mb-10"><SectionHeader title={t('home.exploreGenres')} />
+          <div className="flex flex-wrap gap-2">{gen.map(([g, n]) => <button key={g} type="button" className={chip} onClick={() => s.navigate({ name: 'genre', id: g })}>{genreLabel(g, lang)}<span className="text-muted">{fmtNum(lang, n)}</span></button>)}</div>
+        </section>
+      )}
+      {cols.length > 0 && (
+        <section className="mb-10"><SectionHeader title={t('home.myCollections')} action={<Button variant="ghost" size="sm" onClick={() => s.navigate({ name: 'collections' })}>{t('seeAll')}</Button>} />
+          <div className="flex flex-wrap gap-2">{cols.sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned)).slice(0, 12).map((c) => <button key={c.id} type="button" className={chip} onClick={() => s.navigate({ name: 'collection', id: c.id })}><Layers size={14} style={{ color: c.color }} /><span dir="auto">{c.name}</span></button>)}</div>
+        </section>
+      )}
+    </>
   );
 }
 

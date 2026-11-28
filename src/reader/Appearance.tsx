@@ -1,3 +1,4 @@
+import { RotateCw } from 'lucide-react';
 import type { ReaderPrefs, ReaderTheme } from '../types';
 import { useT } from '../store';
 import { Segmented, Toggle } from '../components/ui';
@@ -33,7 +34,7 @@ function Slider({ label, value, min, max, step, onChange, fmt }: { label: string
   );
 }
 
-export function Appearance({ prefs, onChange, pdf }: { prefs: ReaderPrefs; onChange: (p: Partial<ReaderPrefs>) => void; pdf?: boolean }) {
+export function Appearance({ prefs, onChange, pdf, onRotate }: { prefs: ReaderPrefs; onChange: (p: Partial<ReaderPrefs>) => void; pdf?: boolean; onRotate?: () => void }) {
   const t = useT();
   return (
     <div>
@@ -60,7 +61,11 @@ export function Appearance({ prefs, onChange, pdf }: { prefs: ReaderPrefs; onCha
           {!prefs.pdfText && <>
           <div className="mb-2 text-sm font-medium">{t('rd.mode')}</div>
           <div className="mb-4"><Segmented value={prefs.pdfMode} onChange={(v) => onChange({ pdfMode: v })} options={[{ value: 'scroll', label: t('rd.scroll') }, { value: 'single', label: t('rd.single') }]} /></div>
-          <Slider label={t('rd.zoom')} value={prefs.pdfZoom} min={0.5} max={3} step={0.1} onChange={(v) => onChange({ pdfZoom: v })} fmt={(v) => Math.round(v * 100) + '%'} />
+          <div className="mb-2 text-sm font-medium">{t('rd.fit')}</div>
+          <div className="mb-4"><Segmented value={prefs.pdfFit || 'zoom'} onChange={(v) => onChange({ pdfFit: v })} options={[{ value: 'zoom', label: t('rd.fitZoom') }, { value: 'width', label: t('rd.fitWidth') }, { value: 'page', label: t('rd.fitPage') }]} /></div>
+          {(prefs.pdfFit || 'zoom') === 'zoom' && <Slider label={t('rd.zoom')} value={prefs.pdfZoom} min={0.5} max={3} step={0.1} onChange={(v) => onChange({ pdfZoom: v })} fmt={(v) => Math.round(v * 100) + '%'} />}
+          <Toggle checked={!!prefs.pdfSpread} onChange={(v) => onChange({ pdfSpread: v })} label={t('rd.twoPages')} hint={t('rd.twoPagesHint')} />
+          {onRotate && <button type="button" onClick={onRotate} className="mt-2 inline-flex min-h-[40px] items-center gap-2 rounded-full border px-4 text-sm" style={{ borderColor: 'var(--r-line)' }}><RotateCw size={16} />{t('rd.rotate')}</button>}
           </>}
         </>
       ) : (
@@ -76,6 +81,7 @@ export function Appearance({ prefs, onChange, pdf }: { prefs: ReaderPrefs; onCha
           <div className="mb-2 mt-2 text-sm font-medium">{t('rd.mode')}</div>
           <div className="mb-2"><Segmented value={prefs.mode} onChange={(v) => onChange({ mode: v })} options={[{ value: 'scroll', label: t('rd.scroll') }, { value: 'paged', label: t('rd.paged') }]} /></div>
           {prefs.mode === 'paged' && <Toggle checked={prefs.spread} onChange={(v) => onChange({ spread: v })} label={t('rd.spread')} />}
+          {prefs.mode === 'paged' && <Toggle checked={!!prefs.pageTurn} onChange={(v) => onChange({ pageTurn: v })} label={t('rd.pageTurn')} />}
           <div className="mb-2 mt-2 text-sm font-medium">{t('rd.direction')}</div>
           <div className="mb-2"><Segmented value={prefs.direction} onChange={(v) => onChange({ direction: v })} options={[{ value: 'auto', label: t('rd.auto') }, { value: 'rtl', label: 'RTL ←' }, { value: 'ltr', label: 'LTR →' }]} /></div>
           <Toggle checked={prefs.justify} onChange={(v) => onChange({ justify: v })} label={t('rd.justify')} />

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Edit3, Sparkles, Camera, PenLine, Trash2 } from 'lucide-react';
+import { Edit3, Sparkles, Camera, PenLine, Trash2, Heart } from 'lucide-react';
 import { useStore, useT, useLang, useBooks, useAnnotations, authorKey, useAuthorMeta, uid } from '../store';
 import { Button, Card, EmptyState, Field, Modal, PageTitle, ProgressBar, SectionHeader, Segmented, Watermark } from '../components/ui';
 import { BookGrid, BookCover } from '../components/books';
@@ -117,7 +117,8 @@ export function AuthorPage({ name }: { name: string }) {
           <div className="min-w-0 flex-1">
             <h1 className="text-[32px] font-semibold leading-tight sm:text-[40px]" dir="auto">{name}</h1>
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-              {country && <button type="button" className="hover:underline" onClick={() => s.navigate({ name: 'country', id: country })}>{countryName(country, lang)}</button>}
+              {country && <button type="button" className="hover:underline" onClick={() => s.navigate({ name: 'country', id: country })}>{countryName(country, lang)}{!meta?.country && <span className="ms-1 rounded-full bg-[#c9a46b]/20 px-1.5 text-[11px] text-ink">{t('meta.verify')}</span>}</button>}
+              {meta?.specialty && <span>{meta.specialty}</span>}
               {meta?.born && <span>{t('auth.born')}: {meta.born}</span>}
               {meta?.period && <span>{meta.period}</span>}
               {meta?.languages && <span>{meta.languages}</span>}
@@ -127,6 +128,7 @@ export function AuthorPage({ name }: { name: string }) {
             {err && <p className="mt-2 text-sm text-wine">{err}</p>}
             <div className="mt-4 flex flex-wrap gap-2">
               <Button size="sm" variant="outline" onClick={() => setEdit(true)}><Edit3 size={14} />{t('auth.editProfile')}</Button>
+              <Button size="sm" variant="ghost" onClick={() => save({ favorite: !meta?.favorite })}><Heart size={14} className={meta?.favorite ? 'fill-wine text-wine' : ''} />{meta?.favorite ? t('auth.unfav') : t('auth.fav')}</Button>
               {isHostedByClaude() && <Button size="sm" variant="ghost" disabled={busy} onClick={draft}><Sparkles size={14} />{busy ? t('ai.working') : t('ai.draftBio')}</Button>}
             </div>
           </div>
@@ -183,7 +185,7 @@ function EditAuthor({ open, onClose, name, meta, onSave }: { open: boolean; onCl
     <Modal open={open} onClose={onClose} title={t('auth.editProfile')} footer={<><Button variant="ghost" onClick={onClose}>{t('cancel')}</Button><Button variant="primary" onClick={submit}>{t('save')}</Button></>}>
       <Field label={t('auth.rename')}><input className="field" dir="auto" value={newName} onChange={(e) => setNewName(e.target.value)} /></Field>
       <Field label={t('auth.bio')}><textarea className="field" dir="auto" value={cur.bio || ''} onChange={(e) => upd('bio', e.target.value)} /></Field>
-      <Field label={t('auth.country')}>
+      <Field label={t('auth.nationality')}>
         <select className="field" value={cur.country || ''} onChange={(e) => upd('country', e.target.value)}>
           <option value="">—</option>{countries.map((c) => <option key={c.id} value={c.id}>{c.flag} {c[lang]}</option>)}
         </select>
@@ -192,6 +194,7 @@ function EditAuthor({ open, onClose, name, meta, onSave }: { open: boolean; onCl
         <Field label={t('auth.languages')}><input className="field" value={cur.languages || ''} onChange={(e) => upd('languages', e.target.value)} /></Field>
         <Field label={t('auth.period')}><input className="field" value={cur.period || ''} onChange={(e) => upd('period', e.target.value)} /></Field>
         <Field label={t('auth.born')}><input className="field" value={cur.born || ''} onChange={(e) => upd('born', e.target.value)} /></Field>
+        <Field label={t('auth.specialty')}><input className="field" dir="auto" value={cur.specialty || ''} onChange={(e) => upd('specialty', e.target.value)} /></Field>
       </div>
     </Modal>
   );

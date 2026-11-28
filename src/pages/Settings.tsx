@@ -3,7 +3,8 @@ import { Download, Upload, Copy, ShieldCheck, Trash2, RefreshCw, Bell, Cloud, Gl
 import { useStore, useT, useLang } from '../store';
 import { Button, Card, ConfirmDialog, Field, Modal, PageTitle, Segmented, Toggle } from '../components/ui';
 import { Appearance } from '../reader/Appearance';
-import { exportJson, exportBooksCsv, exportHistoryCsv, exportNotesMd, fullBackupZip, restoreBackup, wipeEverything } from '../lib/backup';
+import { exportJson, exportBooksCsv, exportHistoryCsv, exportNotesMd, fullBackupZip, restoreBackup, wipeEverything, getRestorePoint } from '../lib/backup';
+import { DuplicatesButton } from '../components/Duplicates';
 import { saveFile, isHostedByClaude } from '../lib/claude';
 import { isPersisted, requestPersist } from '../lib/storage';
 import { pull, startSync } from '../lib/sync';
@@ -98,6 +99,14 @@ export default function SettingsPage() {
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line px-4 py-2 text-sm hover:bg-paper"><Upload size={16} />{t('set.restore')}
             <input type="file" accept=".json,.zip" className="sr-only" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const n = await restoreBackup(f); setMsg(t('set.restarted', { n })); } catch (err: any) { setMsg(String(err?.message || err)); } e.target.value = ''; }} />
           </label>
+        </div>
+        <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+          <span className="flex-1 text-sm text-muted">{t('rp.hint')}</span>
+          <Button size="sm" variant="ghost" onClick={async () => { const rp = await getRestorePoint(); if (!rp) { setMsg(t('rp.none')); return; } offer(`my-library-before-2.0-${new Date(rp.at).toISOString().slice(0, 10)}.json`, rp.json, 'application/json'); }}>{t('rp.download')}</Button>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+          <span className="flex-1 text-sm text-muted">{t('dup.hint')}</span>
+          <DuplicatesButton />
         </div>
         {msg && <p className="mt-3 text-sm text-forest">{msg}</p>}
       </Section>

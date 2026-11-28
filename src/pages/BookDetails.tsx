@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Cloud, CloudDownload, CloudUpload, BookOpen, CheckCircle2, Heart, FolderPlus, Edit3, Share2, Sparkles, Trash2, Search as SearchIcon, AlertTriangle, PenLine, Loader2 } from 'lucide-react';
+import { Cloud, CloudDownload, CloudUpload, BookOpen, CheckCircle2, Heart, FolderPlus, Edit3, Share2, Sparkles, Trash2, Search as SearchIcon, AlertTriangle, PenLine, Loader2, Archive, FileDown, BadgeCheck } from 'lucide-react';
 import { useStore, useT, useLang, useAnnotations, useSessions, uid } from '../store';
 import { Button, Card, ConfirmDialog, EmptyState, Field, Modal, ProgressBar, SectionHeader, Stars, TagInput, Watermark } from '../components/ui';
 import { BookCover, STATUSES, AddToCollection, invalidateCover, statusDot } from '../components/books';
 import { AnnotationCard, NoteEditor } from './Notes';
 import { countries, countryName } from '../lib/world';
 import { genreDefs, genreLabel, themeTags } from '../lib/genres';
-import { hasFile, saveCover } from '../lib/storage';
+import { hasFile, saveCover, loadFile } from '../lib/storage';
 import { shrinkImage } from '../lib/parse';
 import { searchOpenLibrary, askClaudeForBook, type Suggestion } from '../lib/net';
-import { isHostedByClaude } from '../lib/claude';
+import { isHostedByClaude, saveFile } from '../lib/claude';
 const inClaude = isHostedByClaude();
 import { fmtDate, fmtDuration, fmtNum } from '../i18n';
 import { useCloud, cloudSupported, enqueueUpload, downloadBook, removeFromCloud, markCoverDirty } from '../lib/cloud';
@@ -43,15 +43,27 @@ export default function BookPage({ id }: { id: string }) {
     const txt = [book.title, book.authors.join(', '), [book.publisher, book.year].filter(Boolean).join(', '), book.isbn ? 'ISBN ' + book.isbn : '', book.description?.slice(0, 400)].filter(Boolean).join('\n');
     navigator.clipboard?.writeText(txt).then(() => s.toast(t('bd.sharedText')), () => {});
   };
+  const unv = new Set(book.unverified || []);
+  const V = ({ f, children }: { f: string; children: React.ReactNode }) => <>{children}{unv.has(f) && <button type="button" title={t('meta.verifyHint')} onClick={() => s.updateBook(id, { unverified: book.unverified!.filter((x) => x !== f) })} className="ms-2 inline-flex items-center gap-1 rounded-full bg-[#c9a46b]/20 px-2 py-0.5 align-middle text-[11px] text-ink hover:bg-[#c9a46b]/35"><BadgeCheck size={12} />{t('meta.verify')}</button>}</>;
+  const langName = (l?: string) => l === 'ar' ? t('lang.ar') : l === 'en' ? t('lang.en') : l;
+  const exportOriginal = async () => {
+    const f = await loadFile(book.fileHash);
+    if (!f) { s.toast(t('bd.noFile')); return; }
+    await saveFile(book.fileName, f);
+  };
   const meta: [string, React.ReactNode][] = [
     [t('bd.originalTitle'), book.originalTitle],
     [t('bd.altTitles'), book.altTitles?.join(' · ')],
     [t('bd.translator'), book.translator],
     [t('bd.publisher'), book.publisher],
-    [t('bd.date'), book.year],
-    [t('bd.language'), book.language === 'ar' ? t('lang.ar') : book.language === 'en' ? t('lang.en') : book.language],
-    [t('bd.origin'), book.countries.length ? <span className="flex flex-wrap gap-1.5">{book.countries.map((c) => <button key={c} type="button" className="underline-offset-2 hover:underline" onClick={() => s.navigate({ name: 'country', id: c })}>{countryName(c, lang)}</button>)}</span> : null],
-    [t('bd.genres'), book.genres.length ? <span className="flex flex-wrap gap-1.5">{book.genres.map((g) => <button key={g} type="button" className="rounded-full bg-paper px-2.5 py-0.5 text-sm hover:bg-line" onClick={() => s.navigate({ name: 'genre', id: g })}>{genreLabel(g, lang)}</button>)}</span> : null],
+    [t('bd.date'), book.year ? <V f="year">{book.year}</V> : null],
+    [t('bd.language'), book.language ? <V f="language">{langName(book.language)}</V> : null],
+    [t('meta.origLang'), book.originalLanguage ? <V f="originalLanguage">{langName(book.originalLanguage)}</V> : null],
+    [t('meta.pubCountry'), book.pubCountry ? <V f="pubCountry">{countryName(book.pubCountry, lang)}</V> : null],
+    [t('meta.subjects'), book.subjects?.length ? <V f="subjects">{book.subjects.join(' · ')}</V> : null],
+    [t('bd.authors'), unv.has('authors') ? <V f="authors">{book.authors.join('، ')}</V> : null],
+    [t('bd.origin'), book.countries.length ? <span className="flex flex-wrap gap-1.5">{book.countries.map((c) => <button key={c} type="button" className="underline-offset-2 hover:underline" onClick={() => s.navigate({ name: 'country', id: c })}>{countryName(c, lang)}</button>)}<V f="countries">{null}</V></span> : null],
+    [t('bd.genres'), book.genres.length ? <span className="flex flex-wrap gap-1.5">{book.genres.map((g) => <button key={g} type="button" className="rounded-full bg-paper px-2.5 py-0.5 text-sm hover:bg-line" onClick={() => s.navigate({ name: 'genre', id: g })}>{genreLabel(g, lang)}</button>)}<V f="genres">{null}</V></span> : null],
     [t('bd.tags'), book.tags.length ? <span className="flex flex-wrap gap-1.5">{book.tags.map((g) => <button key={g} type="button" className="rounded-full border border-line px-2.5 py-0.5 text-sm hover:bg-paper" onClick={() => s.navigate({ name: 'tag', id: g })}>{g}</button>)}</span> : null],
     [t('bd.isbn'), book.isbn],
     [t('bd.pages'), book.pages ? `${fmtNum(lang, book.pages)}${book.pagesEstimated ? ` (${t('bd.estPages')})` : ''}` : null],
@@ -74,6 +86,7 @@ export default function BookPage({ id }: { id: string }) {
           <Watermark className="-bottom-4 end-0" size={70} />
           <h1 className="text-[30px] font-semibold leading-tight sm:text-[42px]" dir="auto">{book.title}</h1>
           {book.subtitle && <p className="serif mt-1 text-xl text-muted" dir="auto">{book.subtitle}</p>}
+          {book.archived && <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-paper px-3 py-1 text-sm text-muted"><Archive size={14} />{t('arc.isArchived')}</p>}
           <div className="mt-2 flex flex-wrap gap-x-3 text-lg">
             {book.authors.length ? book.authors.map((a) => <button key={a} type="button" className="text-forest hover:underline" dir="auto" onClick={() => s.navigate({ name: 'author', id: a })}>{a}</button>) : <span className="text-muted">{t('unknown.author')}</span>}
           </div>
@@ -110,6 +123,8 @@ export default function BookPage({ id }: { id: string }) {
             <Button variant="ghost" size="sm" onClick={share}><Share2 size={15} />{t('bd.share')}</Button>
             {cloudOn && fileOk && !book.cloud && <Button variant="ghost" size="sm" disabled={busyCloud} onClick={() => enqueueUpload(book)}><CloudUpload size={15} />{t('cloud.save')}</Button>}
             {cloudOn && book.cloud && <Button variant="ghost" size="sm" onClick={() => removeFromCloud(book).catch((e) => s.toast(String(e?.message || e)))}><Cloud size={15} className="text-forest" />{t('cloud.remove')}</Button>}
+            {fileOk && <Button variant="ghost" size="sm" onClick={exportOriginal}><FileDown size={15} />{t('bd.exportFile')}</Button>}
+            <Button variant="ghost" size="sm" onClick={() => { s.updateBook(id, book.archived ? { archived: false } : { archived: true, archivedAt: Date.now() }); s.toast(t(book.archived ? 'arc.restored' : 'arc.done')); }}><Archive size={15} />{book.archived ? t('arc.unarchive') : t('arc.archive')}</Button>
             <Button variant="ghost" size="sm" onClick={() => setDel(true)}><Trash2 size={15} />{t('bd.deleteBook')}</Button>
           </div>
           {fileOk && <CloudProgress id={id} />}
@@ -169,7 +184,10 @@ function EditBook({ book, onClose }: { book: Book; onClose: () => void }) {
   const customGenres = useMemo(() => [...new Set(Object.values(s.books).flatMap((b) => b.genres))].filter((g) => !genreDefs.some((d) => d.id === g)), []);
   const up = (p: Partial<Book>) => setV({ ...v, ...p });
   const save = () => {
-    s.upsert('books', { ...v, title: v.title.trim() || book.title, authors: split(authors), altTitles: split(alt), pages: v.pages ? Number(v.pages) : undefined, pagesEstimated: v.pages !== book.pages ? false : v.pagesEstimated, rtl: v.language === 'ar' ? true : v.rtl });
+    const newAuthors = split(authors);
+    const changed = (f: string) => f === 'authors' ? newAuthors.join('|') !== book.authors.join('|') : JSON.stringify((v as any)[f]) !== JSON.stringify((book as any)[f]);
+    const unverified = (book.unverified || []).filter((f) => !changed(f));
+    s.upsert('books', { ...v, unverified: unverified.length ? unverified : undefined, title: v.title.trim() || book.title, authors: split(authors), altTitles: split(alt), pages: v.pages ? Number(v.pages) : undefined, pagesEstimated: v.pages !== book.pages ? false : v.pagesEstimated, rtl: v.language === 'ar' ? true : v.rtl });
     s.toast(t('toast.saved')); onClose();
   };
   const toggleIn = (k: 'genres' | 'countries', id: string) => up({ [k]: v[k].includes(id) ? v[k].filter((x) => x !== id) : [...v[k], id] } as any);
@@ -191,6 +209,17 @@ function EditBook({ book, onClose }: { book: Book; onClose: () => void }) {
             {['fr', 'de', 'es', 'ru', 'tr', 'fa', 'ur', 'it', 'ja', 'zh'].map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
         </Field>
+ <Field label={t('meta.origLang')}>
+          <select className="field" value={v.originalLanguage || ''} onChange={(e) => up({ originalLanguage: e.target.value || undefined })}>
+            <option value="">—</option><option value="ar">العربية</option><option value="en">English</option>
+            {['fr', 'de', 'es', 'ru', 'tr', 'fa', 'ur', 'it', 'ja', 'zh', 'ko', 'pt', 'pl', 'cs', 'el', 'sv', 'no', 'hi'].map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </Field>
+        <Field label={t('meta.pubCountry')}>
+          <select className="field" value={v.pubCountry || ''} onChange={(e) => up({ pubCountry: e.target.value || undefined })}>
+            <option value="">—</option>{countries.map((c) => <option key={c.id} value={c.id}>{c.flag} {c[lang]}</option>)}
+          </select>
+        </Field>
         <Field label={t('bd.pages')}><input className="field" type="number" min={1} value={v.pages || ''} onChange={(e) => up({ pages: Number(e.target.value) || undefined })} /></Field>
         <Field label={t('status')}><select className="field" value={v.status} onChange={(e) => up({ status: e.target.value as any })}>{STATUSES.map((x) => <option key={x} value={x}>{t('st.' + x)}</option>)}</select></Field>
       </div>
@@ -202,6 +231,7 @@ function EditBook({ book, onClose }: { book: Book; onClose: () => void }) {
         <div className="mt-2"><TagInput value={v.genres.filter((g) => !genreDefs.some((d) => d.id === g))} onChange={(custom) => up({ genres: [...v.genres.filter((g) => genreDefs.some((d) => d.id === g)), ...custom] })} placeholder={t('gen.add')} /></div>
       </Field>
       <Field label={t('bd.tags')}><TagInput value={v.tags} onChange={(tags) => up({ tags })} suggestions={allTags} /></Field>
+      <Field label={t('meta.subjects')}><TagInput value={v.subjects || []} onChange={(subjects) => up({ subjects: subjects.length ? subjects : undefined })} /></Field>
       <Field label={t('bd.description')}><textarea className="field" dir="auto" value={v.description || ''} onChange={(e) => up({ description: e.target.value })} /></Field>
     </Modal>
   );
@@ -232,6 +262,10 @@ function Enrich({ book, onClose }: { book: Book; onClose: () => void }) {
     if (f.pages) f.pagesEstimated = false;
     if ((!field || field === 'cover') && sg.cover) { await saveCover(book.id, sg.cover); invalidateCover(book.id); f.hasCover = true; markCoverDirty(book.id); }
     delete f.cover;
+    const keys = Object.keys(f).filter((k) => k !== 'hasCover' && k !== 'pagesEstimated');
+    const prev = new Set(cur.unverified || []);
+    if (sg.source === 'claude') keys.forEach((k) => prev.add(k)); else keys.forEach((k) => prev.delete(k));
+    f.unverified = prev.size ? [...prev] : undefined;
     s.updateBook(book.id, f);
     s.toast(t('toast.saved'));
   };

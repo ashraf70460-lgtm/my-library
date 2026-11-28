@@ -3,6 +3,8 @@ export interface GenreDef { id: string; en: string; ar: string; group: 'fiction'
 const g = (group: GenreDef['group'], id: string, en: string, ar: string): GenreDef => ({ id, en, ar, group });
 
 export const genreDefs: GenreDef[] = [
+  g('fiction', 'literature', 'Literature', 'أدب'),
+  g('fiction', 'novels', 'Novels', 'روايات'),
   g('fiction', 'literary', 'Literary fiction', 'الأدب الروائي'),
   g('fiction', 'historical-fiction', 'Historical fiction', 'رواية تاريخية'),
   g('fiction', 'contemporary', 'Contemporary fiction', 'رواية معاصرة'),
@@ -30,6 +32,12 @@ export const genreDefs: GenreDef[] = [
   g('nonfiction', 'science', 'Science', 'علوم'),
   g('nonfiction', 'technology', 'Technology', 'تقنية'),
   g('nonfiction', 'medicine', 'Medicine', 'طب'),
+  g('nonfiction', 'respiratory', 'Respiratory medicine', 'طب الجهاز التنفسي'),
+  g('nonfiction', 'critical-care', 'Critical care', 'العناية المركزة'),
+  g('nonfiction', 'immunology', 'Immunology', 'علم المناعة'),
+  g('nonfiction', 'ai', 'Artificial intelligence', 'الذكاء الاصطناعي'),
+  g('nonfiction', 'computer-science', 'Computer science', 'علوم الحاسوب'),
+  g('nonfiction', 'geography', 'Geography', 'جغرافيا'),
   g('nonfiction', 'art', 'Art', 'فن'),
   g('nonfiction', 'architecture', 'Architecture', 'عمارة'),
   g('nonfiction', 'travel', 'Travel', 'أدب الرحلات'),
@@ -59,6 +67,12 @@ export const genreLabel = (id: string, lang: 'en' | 'ar') => genreById(id)?.[lan
 export function normalizeGenre(s: string): string {
   const t = s.trim().toLowerCase();
   for (const gd of genreDefs) if (gd.en.toLowerCase() === t || gd.ar === s.trim() || gd.id === t) return gd.id;
+  if (/respirat|pulmon|chest medicine|تنفس|صدري/.test(t)) return 'respiratory';
+  if (/critical care|intensive care|\bicu\b|عناية مركزة|العناية المركزة/.test(t)) return 'critical-care';
+  if (/immunolog|مناعة/.test(t)) return 'immunology';
+  if (/artificial intelligence|machine learning|deep learning|ذكاء اصطناعي|الذكاء الاصطناعي/.test(t)) return 'ai';
+  if (/computer science|programming|computing|حاسوب|برمجة/.test(t)) return 'computer-science';
+  if (/geograph|جغرافي/.test(t)) return 'geography';
   if (/novel|fiction|رواية/.test(t)) return 'literary';
   if (/poem|poetry|شعر/.test(t)) return 'poetry';
   if (/history|تاريخ/.test(t)) return 'history';

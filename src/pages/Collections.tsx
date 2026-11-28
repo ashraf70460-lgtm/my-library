@@ -11,8 +11,8 @@ import { countryName } from '../lib/world';
 import type { Book, Collection } from '../types';
 
 const SUGGEST = {
-  en: ['Books to Read This Year', 'Favorite Books', 'Russian Classics', 'Philosophy', 'Books About History', 'Weekend Reading', 'Books I Recommend', 'Masterpieces', 'Read Again'],
-  ar: ['كتب لأقرأها هذا العام', 'كتبي المفضلة', 'كلاسيكيات روسية', 'فلسفة', 'كتب عن التاريخ', 'قراءة نهاية الأسبوع', 'كتب أنصح بها', 'روائع', 'أعيد قراءتها'],
+  en: ['Medical Library', 'Research & References', 'Respiratory Medicine', 'Japanese Literature', 'Classics', 'Books to Read This Year', 'Favorite Books', 'Russian Classics', 'Philosophy', 'Books About History', 'Weekend Reading', 'Books I Recommend', 'Masterpieces', 'Read Again'],
+  ar: ['المكتبة الطبية', 'أبحاث ومراجع', 'طب الجهاز التنفسي', 'الأدب الياباني', 'الكلاسيكيات', 'كتب لأقرأها هذا العام', 'كتبي المفضلة', 'كلاسيكيات روسية', 'فلسفة', 'كتب عن التاريخ', 'قراءة نهاية الأسبوع', 'كتب أنصح بها', 'روائع', 'أعيد قراءتها'],
 };
 const COLORS = ['#2f4f3e', '#7b2d35', '#6b7445', '#7a5a3a', '#3d4a5c', '#5a2f4f'];
 
@@ -38,7 +38,7 @@ export function CollectionsPage() {
       {!cols.length && <div className="mb-6"><EmptyState title={t('col.empty')} /></div>}
       <div className="mb-8 flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">{t('col.suggest')}:</span>
-        {SUGGEST[lang].filter((n) => !cols.some((c) => c.name === n)).slice(0, 6).map((n) => <Chip key={n} onClick={() => create(n)}><Plus size={13} />{n}</Chip>)}
+        {SUGGEST[lang].filter((n) => !cols.some((c) => c.name === n)).slice(0, 8).map((n) => <Chip key={n} onClick={() => create(n)}><Plus size={13} />{n}</Chip>)}
       </div>
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {cols.sort((a, b) => Number(!!b.pinned) - Number(!!a.pinned) || b.createdAt - a.createdAt).map((c) => <CollectionCard key={c.id} c={c} />)}

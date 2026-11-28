@@ -87,6 +87,7 @@ async function importOne(file: Blob, name: string, path: string, hash: string): 
     language: m.language, publisher: m.publisher, year: m.year, isbn: m.isbn, description: m.description, translator: m.translator,
     rtl: m.rtl || m.language === 'ar' || undefined,
   };
+  if ((m as any).unverified?.length) book.unverified = (m as any).unverified;
   if (m.pages) book.pages = m.pages;
   else if (parsed.chars) { book.pages = Math.max(1, Math.round(parsed.chars / CHARS_PER_PAGE)); book.pagesEstimated = true; book.chars = parsed.chars; }
 
@@ -110,6 +111,7 @@ async function importOne(file: Blob, name: string, path: string, hash: string): 
     });
     if (prefs.authorFromFolder && authorSeg && (book.format === 'pdf' || !book.authors.length)) {
       if (!book.authors.some((a) => a.toLowerCase() === authorSeg!.toLowerCase())) book.authors = [authorSeg];
+      book.unverified = book.unverified?.filter((x) => x !== 'authors'); // the user's own folder names the author
     }
   }
   if (quran) { if (!book.genres.includes('religion')) book.genres.push('religion'); }

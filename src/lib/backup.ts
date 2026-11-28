@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import { useStore } from '../store';
-import { RECORD_KINDS, loadFile, saveFile as storeFile, saveCover, loadCover, putMany, clearAll } from './storage';
+import { RECORD_KINDS, loadFile, saveFile as storeFile, saveCover, loadCover, putMany, clearAll, get, put } from './storage';
 import { countryName } from './world';
 import { genreLabel } from './genres';
 import { pull } from './sync';
@@ -108,4 +108,20 @@ export async function wipeEverything() {
   await clearAll();
   try { localStorage.clear(); } catch { /* */ }
   location.reload();
+}
+
+// ---------- Restore point kept before the 2.0 update ----------
+const RP_KEY = 'restore-point-2.0';
+/** Save one snapshot of every record (not the book files, which are never changed) the first time 2.0 runs. */
+export async function ensureRestorePoint() {
+  try {
+    if (await get('kv', RP_KEY)) return;
+    const s = useStore.getState();
+    if (!Object.keys(s.books).length) { await put('kv', RP_KEY, { at: Date.now(), json: '' }); return; }
+    await put('kv', RP_KEY, { at: Date.now(), json: exportJson() });
+  } catch (e) { console.warn('restore point', e); }
+}
+export async function getRestorePoint(): Promise<{ at: number; json: string } | undefined> {
+  const r = await get<{ at: number; json: string }>('kv', RP_KEY);
+  return r?.json ? r : undefined;
 }

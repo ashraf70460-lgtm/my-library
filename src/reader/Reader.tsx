@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Headphones, ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, List, Maximize, Minimize, Pause, Play, Search, Square, Type, X, StickyNote, Loader2, CheckCircle2 } from 'lucide-react';
+import { Headphones, ArrowLeft, ArrowRight, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, List, Maximize, Minimize, Pause, Play, Search, Square, Type, X, StickyNote, Loader2, CheckCircle2, LayoutGrid } from 'lucide-react';
 import { useStore, useT, useLang, useAnnotations, useSessions, uid } from '../store';
 import { loadFile } from '../lib/storage';
 import { openFlow, type FlowContent, CHARS_PER_PAGE, pdfOutline } from '../lib/parse';
 import { getPdfjs, pdfDocOptions } from '../lib/pdf';
 import { FlowReader, type Loc, type ReaderApi } from './FlowReader';
-import { PdfReader } from './PdfReader';
+import { PdfReader, PdfThumbs } from './PdfReader';
 import { Appearance } from './Appearance';
 import { SoundPanel } from './SoundPanel';
 import { useTts, play as ttsPlay, pause as ttsPause, resume as ttsResume, stop as ttsStop, skip as ttsSkip } from './tts';
@@ -17,7 +17,7 @@ import { byDay, dayKey, goalProgress, streaks } from '../lib/stats';
 import { fmtDuration, fmtNum } from '../i18n';
 import type { Annotation, Book, ReaderPrefs, Session } from '../types';
 
-type Panel = null | 'toc' | 'search' | 'look' | 'marks' | 'goto' | 'sound';
+type Panel = null | 'toc' | 'search' | 'look' | 'marks' | 'goto' | 'sound' | 'thumbs';
 
 export default function Reader({ bookId }: { bookId: string }) {
   const t = useT();
@@ -177,6 +177,7 @@ export default function Reader({ bookId }: { bookId: string }) {
           <div className="truncate text-xs" style={{ color: 'var(--r-muted)' }} dir="auto">{isPdf ? `${t('page')} ${fmtNum(lang, loc.page || 1)} / ${fmtNum(lang, totalPages || 0)}` : chTitle || book.authors[0]}</div>
         </div>
         <RBtn label={t('rd.toc')} onClick={() => setPanel(panel === 'toc' ? null : 'toc')}><List size={20} /></RBtn>
+        {isPdf && pdf && !prefs.pdfText && <RBtn label={t('rd.thumbs')} onClick={() => setPanel(panel === 'thumbs' ? null : 'thumbs')}><LayoutGrid size={19} /></RBtn>}
         <RBtn label={t('rd.search')} onClick={() => setPanel(panel === 'search' ? null : 'search')}><Search size={19} /></RBtn>
         <RBtn label={t('rd.bookmark')} onClick={toggleBookmark}>{bookmarkHere ? <BookmarkCheck size={20} style={{ color: 'var(--r-accent)' }} /> : <Bookmark size={20} />}</RBtn>
         <RBtn label={t('rd.annotations')} onClick={() => setPanel(panel === 'marks' ? null : 'marks')}><StickyNote size={19} /></RBtn>
@@ -244,13 +245,14 @@ export default function Reader({ bookId }: { bookId: string }) {
         <div className="absolute inset-0 z-50 flex justify-end bg-black/30" onClick={() => setPanel(null)}>
           <div className="fade-in flex h-full w-full max-w-sm flex-col shadow-2xl" style={{ background: 'var(--r-bg)', color: prefs.customFg }} onClick={(e) => e.stopPropagation()} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--r-line)' }}>
-              <h2 className="font-semibold">{{ toc: t('rd.toc'), search: t('rd.search'), look: t('rd.appearance'), marks: t('rd.annotations'), goto: t('rd.goto'), sound: t('snd.title') }[panel]}</h2>
+              <h2 className="font-semibold">{{ toc: t('rd.toc'), search: t('rd.search'), look: t('rd.appearance'), marks: t('rd.annotations'), goto: t('rd.goto'), sound: t('snd.title'), thumbs: t('rd.thumbs') }[panel]}</h2>
               <RBtn label={t('close')} onClick={() => setPanel(null)}><X size={18} /></RBtn>
             </div>
             <div className="scroll-thin flex-1 overflow-y-auto p-4">
               {panel === 'toc' && <Toc book={book} content={content} isPdf={isPdf} cur={isPdf ? loc.page : loc.chapter} go={(x) => { if (isPdf && x.page) api.current?.gotoPage?.(x.page); else if (x.chapter != null) api.current?.goChapter(x.chapter, 0); setPanel(null); }} />}
               {panel === 'search' && <SearchPanel api={api} isPdf={isPdf} close={() => setPanel(null)} />}
-              {panel === 'look' && <Appearance prefs={prefs} onChange={setPrefs} pdf={isPdf} />}
+              {panel === 'look' && <Appearance prefs={prefs} onChange={setPrefs} pdf={isPdf} onRotate={isPdf ? () => s.updateBook(bookId, { pdfRotate: ((book.pdfRotate || 0) + 90) % 360 }) : undefined} />}
+              {panel === 'thumbs' && pdf && <PdfThumbs doc={pdf} current={loc.page || 1} rotate={book.pdfRotate || 0} onPick={(p) => { api.current?.gotoPage?.(p); setPanel(null); }} />}
               {panel === 'sound' && <SoundPanel lang={bookLang} onReadFromHere={readAloud} />}
               {panel === 'goto' && <GotoPanel isPdf={isPdf} total={totalPages} api={api} close={() => setPanel(null)} />}
               {panel === 'marks' && <MarksPanel bookId={bookId} ann={bookAnn} isPdf={isPdf} loc={loc} chTitle={chTitle} go={goAnn} />}

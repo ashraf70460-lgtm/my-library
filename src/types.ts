@@ -1,6 +1,6 @@
 export type Lang = 'en' | 'ar';
 export type BookStatus = 'unread' | 'reading' | 'completed' | 'onhold' | 'abandoned' | 'want';
-export type BookFormat = 'epub' | 'pdf' | 'txt' | 'html' | 'md' | 'fb2';
+export type BookFormat = 'epub' | 'pdf' | 'txt' | 'html' | 'md' | 'fb2' | 'docx';
 
 export interface Base {
   id: string;
@@ -54,6 +54,13 @@ export interface Book extends Base {
   rtl?: boolean;
   cloud?: boolean; // file stored on the cloud shelf
   pdfView?: 'page' | 'text'; // remembered PDF display for this book
+  pdfRotate?: number; // 0 | 90 | 180 | 270
+  archived?: boolean; // hidden from the main shelves, never deleted
+  archivedAt?: number;
+  originalLanguage?: string; // language the work was first written in
+  pubCountry?: string; // country of publication (country id)
+  subjects?: string[]; // subject headings
+  unverified?: string[]; // fields filled automatically that still need checking
 }
 
 export interface Annotation extends Base {
@@ -120,6 +127,8 @@ export interface AuthorMeta extends Base {
   genres?: string;
   aiGenerated?: boolean;
   portrait?: string;
+  specialty?: string; // field or specialty (e.g. novelist, physician)
+  favorite?: boolean;
 }
 
 export interface Challenge extends Base {
@@ -144,6 +153,8 @@ export interface Filters {
   yearFrom?: string;
   yearTo?: string;
   tag?: string;
+  region?: string;
+  archived?: boolean; // show archived books instead of the shelf
 }
 
 export type ReaderTheme = 'paper' | 'ivory' | 'sepia' | 'light' | 'dark' | 'night' | 'forest' | 'gray';
@@ -165,6 +176,9 @@ export interface ReaderPrefs {
   pdfZoom: number;
   pdfMode: 'scroll' | 'single';
   pdfText?: boolean; // show PDFs as reflowed text
+  pdfFit?: 'zoom' | 'width' | 'page';
+  pdfSpread?: boolean; // two pages side by side
+  pageTurn?: boolean; // page-turn animation in paged mode
 }
 
 export interface Settings {
@@ -180,6 +194,8 @@ export interface Settings {
   sync: boolean;
   telegram: { token: string; chats: string };
   booksPerYear: number;
+  weeklyGoal?: number; // minutes per week (0 = off)
+  monthlyGoal?: number; // books per month (0 = off)
 }
 
 export interface WishItem extends Base {

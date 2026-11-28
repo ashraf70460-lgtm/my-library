@@ -7,6 +7,7 @@ import { genreLabel } from '../lib/genres';
 import { countries, countryName } from '../lib/world';
 import { fmtDuration, fmtNum } from '../i18n';
 import type { Challenge } from '../types';
+import { Goals, Badges, AnnualReport } from './StatsExtra';
 
 export default function StatsPage() {
   const t = useT();
@@ -60,6 +61,7 @@ export default function StatsPage() {
         <Stat label={t('stats.month')} value={fmtNum(lang, monthDays)} sub={`${t('stats.totalDays')}: ${fmtNum(lang, st.totalDays)}`} />
       </div>
 
+      <Goals />
       <Card className="relative mb-8 overflow-hidden">
         <h2 className="mb-4 text-lg font-semibold">{t('stats.heatmap')}</h2>
         <Heatmap days={days} />
@@ -74,6 +76,8 @@ export default function StatsPage() {
         <Bars title={t('stats.decades')} rows={decades.map(([k, v]) => [`${k}–${k + 9}`, v])} integer />
       </div>
 
+      <AnnualReport />
+      <Badges />
       <Challenges />
     </div>
   );

@@ -12,6 +12,7 @@ LAYOUT: sidebar of sections, generous content column, compact right panel on wid
 :root {
   --c-ivory: 246 241 231; --c-paper: 238 230 215; --c-card: 252 249 243; --c-ink: 35 33 30; --c-muted: 110 103 92;
   --c-line: 221 211 194; --c-forest: 47 79 62; --c-olive: 107 116 69; --c-brown: 122 90 58; --c-wine: 123 45 53;
+  --map-sea: #eef0ea; --map-empty: #e7ddca; --map-none: #f3efe6; --map-off: #f1ede5; --map-line: #fcf9f3; --map-ink: #23211e; --map-green: #2f4f3e;
   --f-serif: 'Literata', 'Source Serif 4', Georgia, serif;
   --f-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: light;
@@ -19,6 +20,7 @@ LAYOUT: sidebar of sections, generous content column, compact right panel on wid
 :root.dark {
   --c-ivory: 23 26 23; --c-paper: 30 34 30; --c-card: 36 41 36; --c-ink: 233 226 210; --c-muted: 165 158 142;
   --c-line: 54 60 52; --c-forest: 141 180 154; --c-olive: 169 178 122; --c-brown: 196 154 108; --c-wine: 214 128 136;
+  --map-sea: #1b1f1b; --map-empty: #343a33; --map-none: #262b26; --map-off: #222622; --map-line: #171a17; --map-ink: #e9e2d2; --map-green: #8db49a;
   color-scheme: dark;
 }
 :root[lang='ar'] {

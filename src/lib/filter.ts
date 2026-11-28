@@ -1,3 +1,4 @@
+import { countryById } from './world';
 import type { Book, Filters } from '../types';
 
 export const norm = (s: string) =>
@@ -19,6 +20,7 @@ export function applyFilters(books: Book[], f: Filters): Book[] {
     if (f.tag && !b.tags.includes(f.tag)) return false;
     if (f.author && !b.authors.includes(f.author)) return false;
     if (f.country && !b.countries.includes(f.country)) return false;
+    if (f.region && !b.countries.some((c) => countryById(c)?.regions.includes(f.region as any))) return false;
     if (f.language && (b.language || 'other') !== f.language) return false;
     if (f.favorite && !b.favorite) return false;
     if (f.format && b.format !== f.format) return false;

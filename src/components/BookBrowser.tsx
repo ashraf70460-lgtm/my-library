@@ -1,10 +1,10 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { CheckSquare, Filter, LayoutGrid, List, Save, Search, X, Trash2, FolderPlus, Tag, Globe2, User, Heart } from 'lucide-react';
+import { CheckSquare, Filter, LayoutGrid, List, Save, Search, X, Trash2, FolderPlus, Tag, Globe2, User, Heart, Archive } from 'lucide-react';
 import type { Book, BookStatus, Filters } from '../types';
 import { useStore, useT, useLang, uid } from '../store';
 import { applyFilters, sortBooks } from '../lib/filter';
 import { genreDefs, genreLabel } from '../lib/genres';
-import { countries, countryName } from '../lib/world';
+import { countries, countryName, regions } from '../lib/world';
 import { BookGrid, STATUSES, AddToCollection } from './books';
 import { Button, Chip, ConfirmDialog, Menu, MenuItem, Modal, Field, EmptyState } from './ui';
 
@@ -26,7 +26,8 @@ export function BookBrowser({ books, preset = {}, hide = [], emptyText }: { book
   const [smartName, setSmartName] = useState('');
 
   const all = { ...preset, ...f };
-  const shown = useMemo(() => sortBooks(applyFilters(books, all), sort, lang), [books, JSON.stringify(all), sort, lang]);
+  const archivedCount = useMemo(() => books.filter((b) => b.archived).length, [books]);
+  const shown = useMemo(() => sortBooks(applyFilters(books.filter((b) => !!b.archived === !!all.archived), all), sort, lang), [books, JSON.stringify(all), sort, lang]);
   const authors = useMemo(() => [...new Set(books.flatMap((b) => b.authors))].sort(), [books]);
   const usedGenres = useMemo(() => [...new Set(books.flatMap((b) => b.genres))], [books]);
   const usedCountries = useMemo(() => [...new Set(books.flatMap((b) => b.countries))], [books]);
@@ -50,7 +51,7 @@ export function BookBrowser({ books, preset = {}, hide = [], emptyText }: { book
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input className="field !rounded-full ps-9" placeholder={t('search.placeholder')} value={f.q || ''} onChange={(e) => set('q', e.target.value)} />
+          <input className="field !rounded-full !ps-9" placeholder={t('search.placeholder')} value={f.q || ''} onChange={(e) => set('q', e.target.value)} />
         </div>
         <Button variant={showFilters || activeCount ? 'primary' : 'outline'} size="sm" onClick={() => setShowFilters(!showFilters)}><Filter size={16} />{t('filter')}{activeCount ? ` · ${activeCount}` : ''}</Button>
         <select className="field !min-h-[36px] !w-auto !rounded-full !py-1 text-sm" value={sort} onChange={(e) => setSort(e.target.value)} aria-label={t('sort')}>
@@ -69,8 +70,9 @@ export function BookBrowser({ books, preset = {}, hide = [], emptyText }: { book
           {!hide.includes('genre') && <Sel label={t('f.genre')} value={f.genre || ''} onChange={(v) => set('genre', v)} options={usedGenres.map((g) => [g, genreLabel(g, lang)])} />}
           {!hide.includes('author') && <Sel label={t('f.author')} value={f.author || ''} onChange={(v) => set('author', v)} options={authors.map((a) => [a, a])} />}
           {!hide.includes('country') && <Sel label={t('f.country')} value={f.country || ''} onChange={(v) => set('country', v)} options={usedCountries.map((c) => [c, countryName(c, lang)])} />}
+          {!hide.includes('region') && !hide.includes('country') && <Sel label={t('f.region')} value={f.region || ''} onChange={(v) => set('region', v)} options={regions.filter((r) => usedCountries.some((c) => countries.find((x) => x.id === c)?.regions.includes(r.id))).map((r) => [r.id, r[lang]])} />}
           <Sel label={t('f.language')} value={f.language || ''} onChange={(v) => set('language', v)} options={usedLangs.map((l) => [l, l === 'ar' ? t('lang.ar') : l === 'en' ? t('lang.en') : l === 'other' ? t('lang.other') : l])} />
-          <Sel label={t('f.format')} value={f.format || ''} onChange={(v) => set('format', v)} options={['epub', 'pdf', 'txt', 'fb2', 'html', 'md'].map((x) => [x, x.toUpperCase()])} />
+          <Sel label={t('f.format')} value={f.format || ''} onChange={(v) => set('format', v)} options={['epub', 'pdf', 'docx', 'txt', 'fb2', 'html', 'md'].map((x) => [x, x.toUpperCase()])} />
           <div>
             <span className="mb-1.5 block text-sm font-medium text-muted">{t('f.year')}</span>
             <div className="flex gap-2"><input className="field" inputMode="numeric" placeholder={t('from')} value={f.yearFrom || ''} onChange={(e) => set('yearFrom', e.target.value)} /><input className="field" inputMode="numeric" placeholder={t('to')} value={f.yearTo || ''} onChange={(e) => set('yearTo', e.target.value)} /></div>
@@ -96,11 +98,15 @@ export function BookBrowser({ books, preset = {}, hide = [], emptyText }: { book
           <Button size="sm" disabled={!sel.size} onClick={() => setBulk('genre')}><Tag size={14} />{t('bulk.genre')}</Button>
           <Button size="sm" disabled={!sel.size} onClick={() => setBulk('country')}><Globe2 size={14} />{t('bulk.country')}</Button>
           <Button size="sm" disabled={!sel.size} onClick={() => setBulk('author')}><User size={14} />{t('bulk.author')}</Button>
+          <Button size="sm" disabled={!sel.size} onClick={() => { sel.forEach((id) => s.updateBook(id, all.archived ? { archived: false } : { archived: true, archivedAt: Date.now() })); s.toast(t(all.archived ? 'arc.restored' : 'arc.done')); setSel(new Set()); }}><Archive size={14} />{all.archived ? t('arc.unarchive') : t('arc.archive')}</Button>
           <Button size="sm" variant="danger" disabled={!sel.size} onClick={() => setDel(true)}><Trash2 size={14} />{t('bulk.delete')}</Button>
         </div>
       )}
 
-      <div className="mb-3 text-sm text-muted">{t('books.count', { n: shown.length })}</div>
+      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-muted">
+        <span>{all.archived ? `${t('arc.title')} · ` : ''}{t('books.count', { n: shown.length })}</span>
+        {(archivedCount > 0 || f.archived) && <button type="button" className="ms-auto inline-flex items-center gap-1.5 rounded-full px-2 py-1 hover:bg-paper hover:text-ink" onClick={() => set('archived', !f.archived)}><Archive size={14} />{f.archived ? t('arc.back') : `${t('arc.title')} · ${archivedCount}`}</button>}
+      </div>
       {shown.length ? (
         <BookGrid books={shown} view={view} selectable={selecting} selected={sel} onToggle={toggle} />
       ) : (

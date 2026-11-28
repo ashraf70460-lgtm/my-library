@@ -105,7 +105,7 @@ const en: Dict = {
   'disc.askOutside': 'Also suggest books I do not own', 'disc.asking': 'Thinking about your shelves…',
   // import
   'imp.title': 'Import Books', 'imp.drop': 'Drop books or folders here', 'imp.or': 'or', 'imp.files': 'Choose files', 'imp.folder': 'Choose a folder',
-  'imp.formats': 'Readable here: EPUB, PDF, TXT, FB2, HTML, Markdown.',
+  'imp.formats': 'Readable here: EPUB, PDF, Word (DOCX), TXT, FB2, HTML, Markdown.',
   'imp.unsupported': 'MOBI, AZW and AZW3 cannot be opened by this reader. Convert them to EPUB first (for example with the free Calibre app), then import the EPUB.',
   'imp.queue': 'Import queue', 'imp.duplicate': 'Already in your library', 'imp.done': 'Imported', 'imp.failed': 'Failed', 'imp.skipped': 'Skipped',
   'imp.reading': 'Reading', 'imp.waiting': 'Waiting', 'imp.summary': '{a} imported · {d} duplicates · {f} failed',
@@ -323,7 +323,7 @@ const ar: Dict = {
   'disc.ask': 'اسأل Claude ماذا أقرأ بعد ذلك', 'disc.askHint': 'ينظر Claude في كتبك غير المقروءة وتاريخ قراءتك ويقترح ما تفتحه بعد ذلك. الاقتراحات من كتبك فقط ما لم تطلب غير ذلك.',
   'disc.askOutside': 'اقترح أيضًا كتبًا لا أملكها', 'disc.asking': 'يتأمل رفوفك…',
   'imp.title': 'استيراد الكتب', 'imp.drop': 'أفلت الكتب أو المجلدات هنا', 'imp.or': 'أو', 'imp.files': 'اختر ملفات', 'imp.folder': 'اختر مجلدًا',
-  'imp.formats': 'الصيغ المقروءة هنا: EPUB وPDF وTXT وFB2 وHTML وMarkdown.',
+  'imp.formats': 'الصيغ المقروءة هنا: EPUB وPDF وWord (DOCX) وTXT وFB2 وHTML وMarkdown.',
   'imp.unsupported': 'لا يستطيع هذا القارئ فتح ملفات MOBI وAZW وAZW3. حوّلها أولًا إلى EPUB (مثلًا ببرنامج Calibre المجاني) ثم استورد ملف EPUB.',
   'imp.queue': 'قائمة الاستيراد', 'imp.duplicate': 'موجود في مكتبتك', 'imp.done': 'تم الاستيراد', 'imp.failed': 'فشل', 'imp.skipped': 'تم التخطي',
   'imp.reading': 'جارٍ القراءة', 'imp.waiting': 'في الانتظار', 'imp.summary': 'استُورد {a} · مكرر {d} · فشل {f}',
@@ -442,6 +442,8 @@ const ar: Dict = {
   'imp.ios': 'على iPad: اضغط «اختر ملفات» ثم «تصفح» لاختيار الكتب من «الملفات» أو iCloud Drive أو التنزيلات. يمكنك اختيار عدة كتب معًا.',
 };
 
+import { en2, ar2 } from './i18n2';
+Object.assign(en, en2); Object.assign(ar, ar2);
 export const dicts: Record<Lang, Dict> = { en, ar };
 
 const plural: Record<string, Intl.PluralRules> = {};

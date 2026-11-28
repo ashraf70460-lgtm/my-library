@@ -14,8 +14,8 @@ export interface ParsedMeta {
   chars?: number;
 }
 
-export const SUPPORTED: Record<string, BookFormat> = { epub: 'epub', pdf: 'pdf', txt: 'txt', text: 'txt', html: 'html', htm: 'html', xhtml: 'html', md: 'md', markdown: 'md', fb2: 'fb2' };
-export const UNSUPPORTED = ['mobi', 'azw', 'azw3', 'kfx', 'prc', 'djvu', 'cbz', 'cbr', 'doc', 'docx', 'rtf'];
+export const SUPPORTED: Record<string, BookFormat> = { epub: 'epub', pdf: 'pdf', txt: 'txt', text: 'txt', html: 'html', htm: 'html', xhtml: 'html', md: 'md', markdown: 'md', fb2: 'fb2', docx: 'docx' };
+export const UNSUPPORTED = ['mobi', 'azw', 'azw3', 'kfx', 'prc', 'djvu', 'cbz', 'cbr', 'doc', 'rtf'];
 export const extOf = (name: string) => (name.split('.').pop() || '').toLowerCase();
 export const CHARS_PER_PAGE = 1600;
 
@@ -362,7 +362,7 @@ export async function extractMetadata(file: Blob, fileName: string): Promise<Par
   if (fmt === 'epub') {
     const r = await openEpub(file, false);
     const meta = { ...base, ...stripEmpty(r.meta) };
-    if (!meta.authors?.length) meta.authors = base.authors;
+    if (!meta.authors?.length) { meta.authors = base.authors; if (base.authors?.length) (meta as any).unverified = ['authors']; }
     return { meta, cover: r.cover, toc: r.toc, chars: r.chars };
   }
   if (fmt === 'pdf') return extractPdf(file, base, guess);
@@ -372,6 +372,23 @@ export async function extractMetadata(file: Blob, fileName: string): Promise<Par
     return { meta: { ...base, ...stripEmpty(r.meta), language: r.meta.language || detectLang(r.chapters[0]?.text || '') }, cover: r.cover, toc: r.chapters.map((c, i) => ({ label: c.title || `${i + 1}`, chapter: i })), chars };
   }
   const flow = await openFlowFromText(file, fileName, fmt);
+  if (fmt === 'docx') {
+    // Word keeps title and author in docProps/core.xml
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const core = await zip.file('docProps/core.xml')?.async('string');
+      if (core) {
+        const x = new DOMParser().parseFromString(core, 'application/xml');
+        const tag = (n: string) => x.getElementsByTagNameNS('*', n)[0]?.textContent?.trim();
+        const title = tag('title'), creator = tag('creator');
+        if (title && !junkTitle(title)) base.title = title;
+        if (creator && !/^(user|admin|owner|pc|hp|dell|python-docx|microsoft office user|author)$/i.test(creator)) base.authors = [creator];
+      }
+    } catch { /* not critical */ }
+    if (base.authors?.length && base.authors[0] === guess.author) (base as any).unverified = ['authors'];
+    return { meta: { ...base, language: detectLang(flow.chapters.map((c) => c.text).join(' ').slice(0, 6000)) }, toc: flow.chapters.map((c, i) => ({ label: c.title || `${i + 1}`, chapter: i })), chars: flow.chapters.reduce((s, c) => s + c.text.length, 0) };
+  }
+  if (base.authors?.length) (base as any).unverified = ['authors']; // author guessed from the file name
   return { meta: { ...base, title: flow.title || base.title, language: detectLang(flow.chapters.map((c) => c.text).join(' ').slice(0, 6000)) }, toc: flow.chapters.map((c, i) => ({ label: c.title || `${i + 1}`, chapter: i })), chars: flow.chapters.reduce((s, c) => s + c.text.length, 0) };
 }
 
@@ -382,8 +399,13 @@ function stripEmpty<T extends object>(o: T): Partial<T> {
 }
 
 async function openFlowFromText(file: Blob, fileName: string, fmt: BookFormat) {
-  const text = decodeText(await file.arrayBuffer());
   const guess = guessFromFileName(fileName).title;
+  if (fmt === 'docx') {
+    const mammoth: any = await import('mammoth');
+    const res = await (mammoth.default || mammoth).convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+    return htmlToChapters(`<body>${res.value}</body>`, guess);
+  }
+  const text = decodeText(await file.arrayBuffer());
   if (fmt === 'txt') return { title: guess, chapters: textToChapters(text, guess) };
   if (fmt === 'md') {
     const html = await marked.parse(text);
@@ -405,6 +427,7 @@ async function extractPdf(file: Blob, base: Partial<Book>, guess: { title: strin
       const fileArabic = /[؀-ۿ]/.test(guess.title);
       if (!junkTitle(info.Title) && !(fileArabic && !/[؀-ۿ]/.test(info.Title))) meta.title = info.Title.trim();
       if (info.Author && !/^(user|admin|owner|pc|hp|dell)$/i.test(info.Author.trim()) && !meta.authors?.length) meta.authors = [info.Author.trim()];
+      if (meta.authors?.length && meta.authors[0] === guess.author) (meta as any).unverified = ['authors'];
       if (info.Subject && !meta.description) meta.description = String(info.Subject).slice(0, 1000);
     } catch { /* no metadata */ }
     let sampleText = '';

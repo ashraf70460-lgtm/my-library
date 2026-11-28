@@ -3,7 +3,8 @@ import { BookOpen, Shuffle, Sparkles } from 'lucide-react';
 import { useStore, useT, useLang, useBooks, useSessions } from '../store';
 import { Button, Card, EmptyState, PageTitle, SectionHeader, Toggle, Watermark } from '../components/ui';
 import { BookCover, Shelf } from '../components/books';
-import { countryName } from '../lib/world';
+import { countryName, countryById } from '../lib/world';
+import { Monogram } from './Authors';
 import { askClaude, isHostedByClaude } from '../lib/claude';
 import { genreLabel } from '../lib/genres';
 import { BooksToAdd, OnlineRecs, Wishlist } from '../components/Recommendations';
@@ -15,7 +16,29 @@ export default function DiscoverPage() {
   const books = useBooks();
   const sessions = useSessions();
   const [seed, setSeed] = useState(() => Math.random());
-  const unread = useMemo(() => books.filter((b) => b.status === 'unread' || b.status === 'want'), [books]);
+  const unread = useMemo(() => books.filter((b) => !b.archived && (b.status === 'unread' || b.status === 'want')), [books]);
+  // rotate what is shown: changes every day, and on "shuffle"
+  const daySeed = Math.floor(Date.now() / 86400000) + Math.floor(seed * 1000);
+  const rot = <T,>(arr: T[], key: (x: T) => string) => [...arr].sort((a, b) => hash(key(a) + daySeed) - hash(key(b) + daySeed));
+  const liked = useMemo(() => books.filter((b) => b.favorite || b.status === 'completed' || (b.rating || 0) >= 4), [books]);
+  const similar = useMemo(() => {
+    const g = new Map<string, number>(), c = new Map<string, number>();
+    liked.forEach((b) => { b.genres.forEach((x) => g.set(x, (g.get(x) || 0) + 1)); b.countries.forEach((x) => c.set(x, (c.get(x) || 0) + 1)); });
+    return unread.map((b) => ({ b, sc: b.genres.reduce((a, x) => a + (g.get(x) || 0), 0) + b.countries.reduce((a, x) => a + (c.get(x) || 0), 0) }))
+      .filter((x) => x.sc > 0).sort((a, b) => b.sc - a.sc).slice(0, 30).map((x) => x.b);
+  }, [liked, unread]);
+  const mayLike = useMemo(() => {
+    const g = new Set(liked.flatMap((b) => b.genres)), c = new Set(liked.flatMap((b) => b.countries));
+    const readAuthors = new Set(liked.flatMap((b) => b.authors));
+    const m = new Map<string, number>();
+    unread.forEach((b) => b.authors.forEach((a) => { if (!readAuthors.has(a)) m.set(a, (m.get(a) || 0) + b.genres.filter((x) => g.has(x)).length + b.countries.filter((x) => c.has(x)).length + 0.1); }));
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 24).map(([a]) => a);
+  }, [liked, unread]);
+  const asian = useMemo(() => unread.filter((b) => b.countries.some((c) => countryById(c)?.regions.some((r) => ['east-asia', 'south-asia', 'southeast-asia', 'central-asia'].includes(r)))), [unread]);
+  const gems = useMemo(() => {
+    const cnt = new Map<string, number>(); books.forEach((b) => b.countries.forEach((c) => cnt.set(c, (cnt.get(c) || 0) + 1)));
+    return unread.filter((b) => !b.lastOpenedAt && b.countries.length && b.countries.every((c) => (cnt.get(c) || 0) <= 3));
+  }, [books, unread]);
   const forgotten = useMemo(() => unread.filter((b) => !b.lastOpenedAt).sort((a, b) => a.addedAt - b.addedAt).slice(0, 14), [unread]);
   const pick = unread.length ? unread[Math.floor(seed * unread.length)] : undefined;
   const short = useMemo(() => unread.filter((b) => b.pages).sort((a, b) => (a.pages || 0) - (b.pages || 0)).slice(0, 12), [unread]);
@@ -54,10 +77,20 @@ export default function DiscoverPage() {
         </div>
       )}
       {isHostedByClaude() && <AskClaude />}
+      <div className="mb-4 flex items-center gap-3"><span className="rounded-full bg-forest px-3 py-1 text-xs font-semibold text-ivory">{t('disc.inLibrary')}</span><span className="h-px flex-1 bg-line" /></div>
+      {similar.length > 0 && <section className="mb-10"><SectionHeader title={t('disc.similar')} /><Shelf books={rot(similar, (b) => b.id).slice(0, 14)} /></section>}
+      {mayLike.length > 0 && (
+        <section className="mb-10"><SectionHeader title={t('disc.mayLike')} />
+          <div className="flex flex-wrap gap-2">{rot(mayLike, (a) => a).slice(0, 10).map((a) => <button key={a} type="button" onClick={() => s.navigate({ name: 'author', id: a })} className="flex items-center gap-2 rounded-full border border-line bg-card py-1 pe-3 ps-1 text-sm hover:border-forest/40"><Monogram name={a} size={28} /><span dir="auto">{a}</span></button>)}</div>
+        </section>
+      )}
       {forgotten.length > 0 && <section className="mb-10"><SectionHeader title={t('disc.forgotten')} /><Shelf books={forgotten} /></section>}
+      {gems.length > 0 && <section className="mb-10"><SectionHeader title={t('disc.gems')} /><Shelf books={rot(gems, (b) => b.id).slice(0, 14)} /></section>}
+      {asian.length > 0 && <section className="mb-10"><SectionHeader title={t('disc.asian')} /><Shelf books={rot(asian, (b) => b.id).slice(0, 14)} /></section>}
       {favAuthor && <section className="mb-10"><SectionHeader title={t('disc.byFav', { a: favAuthor })} /><Shelf books={unread.filter((b) => b.authors.includes(favAuthor))} /></section>}
       {unexplored && <section className="mb-10"><SectionHeader title={`${t('disc.unexplored')}: ${countryName(unexplored, lang)}`} action={<Button size="sm" variant="ghost" onClick={() => s.navigate({ name: 'country', id: unexplored })}>{t('seeAll')}</Button>} /><Shelf books={unread.filter((b) => b.countries.includes(unexplored))} /></section>}
       {short.length > 0 && <section className="mb-10"><SectionHeader title={t('disc.short')} /><Shelf books={short} /></section>}
+      <div className="mb-4 mt-4 flex items-center gap-3"><span className="rounded-full bg-[#c9a46b] px-3 py-1 text-xs font-semibold text-[#23211e]">{t('disc.notOwned')}</span><span className="h-px flex-1 bg-line" /></div>
       <BooksToAdd />
       <OnlineRecs />
       <Wishlist />
@@ -113,3 +146,5 @@ Return JSON only: {"picks": [{"id": string|null, "title": string, "why": string}
     </Card>
   );
 }
+
+function hash(x: string) { let h = 2166136261; for (let i = 0; i < x.length; i++) { h ^= x.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }

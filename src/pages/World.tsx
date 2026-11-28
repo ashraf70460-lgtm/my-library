@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Search, Map as MapIcon } from 'lucide-react';
+import { Monogram } from './Authors';
 import { useStore, useT, useLang, useBooks } from '../store';
 import { countries, countryById, overviews, regions, continents } from '../lib/world';
 import { Button, Card, EmptyState, PageTitle, ProgressBar, SectionHeader, Watermark } from '../components/ui';
@@ -25,7 +26,7 @@ export function WorldPage() {
   const list = countries.filter((c) => (!region || c.regions.includes(region as any)) && (byCountry.get(c.id)?.length || overviews[c.id]));
   return (
     <div>
-      <PageTitle title={t('world.title')} sub={t('world.sub')} />
+      <PageTitle title={t('world.title')} sub={t('world.sub')} actions={<Button onClick={() => s.navigate({ name: 'map' })}><MapIcon size={16} />{t('nav.map')}</Button>} />
       {!byCountry.size && <div className="mb-8"><EmptyState title={t('world.empty')} actions={<Button variant="primary" onClick={() => s.navigate({ name: 'books' })}>{t('nav.books')}</Button>} /></div>}
       <SectionHeader title={t('world.regions')} />
       <div className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -75,6 +76,8 @@ export function CountryPage({ id }: { id: string }) {
   const co = countryById(id);
   const books = useBooks().filter((b) => b.countries.includes(id));
   const ov = overviews[id];
+  const s = useStore();
+  const authors = useMemo(() => { const m = new Map<string, number>(); for (const b of books) for (const a of b.authors) m.set(a, (m.get(a) || 0) + 1); return [...m.entries()].sort((a, b) => b[1] - a[1]); }, [books]);
   const key = `ml-ov-${id}-${lang}`;
   const [ai, setAi] = useState<string>(() => lsGet<{ v: string }>(key, { v: '' }).v);
   const [busy, setBusy] = useState(false);
@@ -94,7 +97,7 @@ export function CountryPage({ id }: { id: string }) {
         <div className="watermark -bottom-8 end-4 !text-[#f6f1e7]/[0.07]" style={{ fontSize: 100 }}>{t('brand')}</div>
         <div className="relative flex items-center gap-4">
           <span className="text-5xl" aria-hidden="true">{co.flag}</span>
-          <div><h1 className="text-[32px] font-semibold leading-tight sm:text-[44px]">{co.lit[lang]}</h1><div className="opacity-80">{co[lang]} · {t('books.count', { n: books.length })}</div></div>
+          <div><h1 className="text-[32px] font-semibold leading-tight sm:text-[44px]">{co.lit[lang]}</h1><div className="opacity-80">{co[lang]} · {t('books.count', { n: books.length })} · {t('map.authors', { n: authors.length })}</div></div>
         </div>
         {books.length > 0 && <div className="relative mt-5 max-w-sm"><div className="mb-1 flex justify-between text-xs opacity-80"><span>{t('world.progress')}</span><span>{fmtNum(lang, done)} / {fmtNum(lang, books.length)}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-[#f6f1e7]/20"><div className="h-full bg-[#c9a46b]" style={{ width: `${(done / books.length) * 100}%` }} /></div></div>}
       </div>
@@ -117,8 +120,65 @@ export function CountryPage({ id }: { id: string }) {
           </Card>
         )}
       </div>
+      {authors.length > 0 && (
+        <section className="mb-10">
+          <SectionHeader title={`${t('nav.authors')} · ${fmtNum(lang, authors.length)}`} />
+          <div className="flex flex-wrap gap-2">
+            {authors.map(([a, n]) => (
+              <button key={a} type="button" onClick={() => s.navigate({ name: 'author', id: a })} className="flex items-center gap-2 rounded-full border border-line bg-card py-1 pe-3 ps-1 text-sm hover:border-forest/40">
+                <Monogram name={a} size={28} /><span dir="auto">{a}</span><span className="text-muted">{fmtNum(lang, n)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       <SectionHeader title={t('world.yourBooks')} />
       <BookBrowser books={books} hide={['country']} />
+    </div>
+  );
+}
+
+export function CountriesPage() {
+  const t = useT();
+  const lang = useLang();
+  const s = useStore();
+  const books = useBooks();
+  const [q, setQ] = useState('');
+  const [region, setRegion] = useState('');
+  const rows = useMemo(() => countries.map((c) => {
+    const bs = books.filter((b) => b.countries.includes(c.id));
+    return { c, books: bs.length, authors: new Set(bs.flatMap((b) => b.authors)).size, done: bs.filter((b) => b.status === 'completed').length };
+  }), [books]);
+  const shown = rows
+    .filter((r) => (!region || r.c.regions.includes(region as any)) && (!q || `${r.c.en} ${r.c.ar} ${r.c.lit.en} ${r.c.lit.ar}`.toLowerCase().includes(q.toLowerCase())))
+    .sort((a, b) => b.books - a.books || a.c[lang].localeCompare(b.c[lang], lang));
+  const withBooks = rows.filter((r) => r.books).length;
+  return (
+    <div>
+      <PageTitle title={t('nav.countries')} sub={t('ctry.sub', { n: withBooks })} actions={<Button onClick={() => s.navigate({ name: 'map' })}><MapIcon size={16} />{t('nav.map')}</Button>} />
+      <div className="mb-5 flex flex-wrap gap-2">
+        <div className="relative min-w-[200px] flex-1 sm:max-w-sm">
+          <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input className="field !rounded-full !ps-9" placeholder={t('map.searchCountry')} value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <select className="field !w-auto !rounded-full !py-1 text-sm" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={t('f.region')}>
+          <option value="">{t('map.allRegions')}</option>{regions.map((r) => <option key={r.id} value={r.id}>{r[lang]}</option>)}
+        </select>
+      </div>
+      <div className="overflow-hidden rounded-2xl border border-line bg-card">
+        <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_4.5rem_4.5rem] gap-2 border-b border-line px-4 py-2 text-xs text-muted sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_5rem_5rem]">
+          <span /><span>{t('ctry.country')}</span><span className="hidden sm:block">{t('ctry.region')}</span><span className="text-end">{t('nav.authors')}</span><span className="text-end">{t('nav.books')}</span>
+        </div>
+        {shown.map(({ c, books: n, authors: a, done }) => (
+          <button key={c.id} type="button" onClick={() => s.navigate({ name: 'country', id: c.id })} className={`grid w-full grid-cols-[2.5rem_minmax(0,1fr)_4.5rem_4.5rem] items-center gap-2 border-b border-line/60 px-4 py-2.5 text-start last:border-0 hover:bg-paper/60 sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_5rem_5rem] ${n ? '' : 'text-muted'}`}>
+            <span className="text-2xl" aria-hidden="true">{c.flag}</span>
+            <span className="min-w-0"><span className="block truncate font-medium">{c[lang]}</span><span className="block truncate text-xs text-muted">{c.lit[lang]}{n ? ` · ${t('ctry.read', { n: done })}` : ''}</span></span>
+            <span className="hidden truncate text-sm text-muted sm:block">{c.regions.map((r) => regions.find((x) => x.id === r)?.[lang]).join('، ')}</span>
+            <span className="text-end">{fmtNum(lang, a)}</span>
+            <span className="text-end font-semibold">{fmtNum(lang, n)}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
